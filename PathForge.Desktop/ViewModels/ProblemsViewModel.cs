@@ -38,6 +38,7 @@ public sealed class ProblemsViewModel : ObservableObject
     private bool _isExplicitlyCreatingNewProblem;
     private bool _isRefreshingList;
     private int _selectionGeneration;
+    private int _selectedProblemTab;
     private ProblemFormState _savedFormState = new(string.Empty, string.Empty, string.Empty, string.Empty,
         string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, false);
     private ScopeItemDetails? _selectedScopeItem;
@@ -158,6 +159,7 @@ public sealed class ProblemsViewModel : ObservableObject
         ? "Đang tạo bài toán mới. Lưu sẽ thêm một bài toán riêng."
         : "Đang chỉnh sửa bài toán đã chọn. Lưu sẽ cập nhật bài toán này.";
     public string SaveButtonText => IsNew ? "Tạo bài toán" : "Lưu thay đổi";
+    public int SelectedProblemTab { get => _selectedProblemTab; set => SetProperty(ref _selectedProblemTab, value); }
     public bool IsExisting => !IsNew && _selectedProblemId.HasValue;
     public bool HasProblems => Problems.Count > 0;
     public bool HasUnsavedChanges => CaptureFormState() != _savedFormState;
@@ -314,6 +316,7 @@ public sealed class ProblemsViewModel : ObservableObject
     {
         ++_selectionGeneration;
         _isExplicitlyCreatingNewProblem = true;
+        SelectedProblemTab = 0;
         SelectedProblem = null;
         _selectedProblemId = null;
         IsNew = true;

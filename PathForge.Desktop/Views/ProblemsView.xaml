@@ -1,16 +1,71 @@
 <UserControl x:Class="PathForge.Desktop.Views.ProblemsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Margin="30,26">
+    <UserControl.Resources>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,4" />
+        </Style>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style x:Key="MultilineBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+        <Style x:Key="CompactButton" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+            <Setter Property="Padding" Value="11,6" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="0,14,0,0" />
+        </Style>
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource MutedBrush}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="TabChrome" Padding="14,9" Margin="0,0,4,0" Background="Transparent"
+                                BorderBrush="Transparent" BorderThickness="0,0,0,3" Cursor="Hand">
+                            <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="TabChrome" Property="Background" Value="#F0F6F2" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="TabChrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="24,20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="22" />
+            <RowDefinition Height="16" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
         <DockPanel LastChildFill="False">
             <StackPanel>
-                <TextBlock Text="Bài toán" FontSize="29" FontWeight="SemiBold" />
-                <TextBlock Text="Xác định điều cần giải quyết, mục tiêu và bước tiếp theo." Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}" />
+                <TextBlock Text="Bài toán" FontSize="27" FontWeight="SemiBold" />
+                <TextBlock Text="Xác định điều cần giải quyết, mục tiêu và bước tiếp theo." Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" />
             </StackPanel>
             <Button DockPanel.Dock="Right" Content="＋  Tạo bài toán" Command="{Binding NewProblemCommand}"
                     Style="{StaticResource PrimaryButtonStyle}" VerticalAlignment="Center" />
@@ -18,36 +73,37 @@
 
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="300" />
-                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="270" MinWidth="220" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="14">
+            <!-- DANH SÁCH BÀI TOÁN -->
+            <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="12">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top">
-                        <TextBlock Text="Danh sách" FontSize="17" FontWeight="SemiBold" Margin="2,0,0,10" />
-                        <DockPanel LastChildFill="False">
+                        <TextBlock Text="Danh sách" FontSize="16" FontWeight="SemiBold" Margin="2,0,0,8" />
+                        <DockPanel LastChildFill="True">
                             <Button Content="Tìm" Command="{Binding SearchCommand}" Style="{StaticResource SecondaryButtonStyle}"
                                     DockPanel.Dock="Right" Margin="8,0,0,0" Padding="12,7" />
-                            <TextBox Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" ToolTip="Tìm theo tên hoặc mục tiêu"
-                                     Padding="10,7" MinHeight="38" />
+                            <TextBox Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" ToolTip="Tìm theo tên hoặc mục tiêu" />
                         </DockPanel>
                     </StackPanel>
-                    <Grid Margin="0,12,0,0">
+                    <Grid Margin="0,10,0,0">
                         <ListBox ItemsSource="{Binding Problems}" SelectedItem="{Binding SelectedProblem, Mode=TwoWay}"
-                                 BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                 BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="13" Margin="0,0,0,7" Background="#F6F8F6" BorderBrush="{StaticResource LineBrush}"
+                                    <Border Padding="11" Margin="0,0,0,6" Background="#F6F8F6" BorderBrush="{StaticResource LineBrush}"
                                             BorderThickness="1" CornerRadius="9">
                                         <StackPanel>
                                             <TextBlock Text="{Binding Title}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding Goal}" Margin="0,5,0,0" Foreground="{StaticResource MutedBrush}"
-                                                       TextWrapping="Wrap" MaxHeight="42" />
-                                            <DockPanel Margin="0,9,0,0">
+                                            <TextBlock Text="{Binding Goal}" Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}"
+                                                       TextWrapping="Wrap" MaxHeight="36" TextTrimming="CharacterEllipsis" />
+                                            <DockPanel Margin="0,8,0,0">
                                                 <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" FontSize="11" />
-                                                <TextBlock Text="{Binding UpdatedText}" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}" FontSize="11" />
+                                                <TextBlock Text="{Binding UpdatedText}" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}" FontSize="11" HorizontalAlignment="Right" />
                                             </DockPanel>
                                         </StackPanel>
                                     </Border>
@@ -55,7 +111,7 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <StackPanel Visibility="{Binding HasProblems, Converter={StaticResource InverseVisibilityConverter}}"
-                                    Margin="12,24,12,0" VerticalAlignment="Top">
+                                    Margin="10,20,10,0" VerticalAlignment="Top">
                             <TextBlock Text="{Binding EmptyListMessage}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
                             <Button Content="＋ Tạo bài toán" Command="{Binding NewProblemCommand}" Style="{StaticResource SecondaryButtonStyle}"
                                     HorizontalAlignment="Left" Margin="0,12,0,0" />
@@ -64,166 +120,261 @@
                 </DockPanel>
             </Border>
 
-            <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="22">
+            <!-- CHI TIẾT -->
+            <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="20,16">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
-                        <RowDefinition Height="14" />
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <DockPanel LastChildFill="False">
+
+                    <!-- Header cố định: tiêu đề + trạng thái + hành động trạng thái -->
+                    <DockPanel Margin="0,0,0,4">
+                        <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center"
+                                   Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="12" Padding="10,4" Margin="0,0,10,0" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" FontSize="12" />
+                            </Border>
+                            <Button Content="Bắt đầu / tiếp tục" Command="{Binding MoveToInProgressCommand}" Style="{StaticResource CompactButton}" />
+                            <Button Content="Bị chặn" Command="{Binding MoveToBlockedCommand}" Style="{StaticResource CompactButton}" />
+                            <Button Content="✓ Xác nhận hoàn thành" Command="{Binding ResolveCommand}" Style="{StaticResource CompactButton}" Margin="0" />
+                        </WrapPanel>
                         <StackPanel>
-                            <TextBlock Text="Thông tin bài toán" FontSize="20" FontWeight="SemiBold" />
-                            <TextBlock Text="{Binding EditorModeText}" Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                            <TextBlock Text="Thông tin bài toán" FontSize="19" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding EditorModeText}" Margin="0,3,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="12" Padding="10,4" DockPanel.Dock="Right"
-                                VerticalAlignment="Center" Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" FontSize="12" />
-                        </Border>
                     </DockPanel>
 
-                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                        <StackPanel Margin="0,0,7,4">
-                            <TextBlock Text="MỤC TIÊU VÀ BỐI CẢNH" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="0,0,0,9" />
-                            <TextBlock Text="Tên bài toán *" Margin="0,4,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding Title, UpdateSourceTrigger=LostFocus}" />
-                            <TextBlock Text="Mục tiêu cần đạt *" Margin="0,14,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding Goal, UpdateSourceTrigger=LostFocus}" MinHeight="72" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
-                            <TextBlock Text="Mô tả hoặc điều kiện phạm vi" Margin="0,14,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding Description, UpdateSourceTrigger=LostFocus}" MinHeight="62" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+                    <!-- Các tab: mỗi tab vừa một màn hình, không cuộn dài -->
+                    <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedProblemTab, Mode=TwoWay}">
+                        <!-- TAB 1: THÔNG TIN + 5W-1H cạnh nhau -->
+                        <TabItem Header="Thông tin &amp; phân tích">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*" MinWidth="260" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="1.25*" MinWidth="320" />
+                                </Grid.ColumnDefinitions>
 
-                            <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,22,0,18" />
-                            <TextBlock Text="PHÂN TÍCH 5W–1H" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
-                            <TextBlock Text="Bổ sung những thông tin đã biết; bạn có thể để trống phần chưa rõ." Margin="0,4,0,7" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                            <TextBlock Text="What · Vấn đề hoặc kết quả cần đạt" Margin="0,8,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding AnalysisWhat, UpdateSourceTrigger=LostFocus}" MinHeight="48" AcceptsReturn="True" TextWrapping="Wrap" />
-                            <TextBlock Text="Why · Lý do cần giải quyết" Margin="0,10,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding AnalysisWhy, UpdateSourceTrigger=LostFocus}" MinHeight="48" AcceptsReturn="True" TextWrapping="Wrap" />
-                            <TextBlock Text="Who · Người hoặc đối tượng liên quan" Margin="0,10,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding AnalysisWho, UpdateSourceTrigger=LostFocus}" MinHeight="48" AcceptsReturn="True" TextWrapping="Wrap" />
-                            <TextBlock Text="Where · Bối cảnh hoặc môi trường" Margin="0,10,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding AnalysisWhere, UpdateSourceTrigger=LostFocus}" MinHeight="48" AcceptsReturn="True" TextWrapping="Wrap" />
-                            <TextBlock Text="When · Thời điểm hoặc điều kiện xảy ra" Margin="0,10,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding AnalysisWhen, UpdateSourceTrigger=LostFocus}" MinHeight="48" AcceptsReturn="True" TextWrapping="Wrap" />
-                            <TextBlock Text="How · Hướng tiếp cận hoặc giả thuyết ban đầu" Margin="0,10,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding AnalysisHow, UpdateSourceTrigger=LostFocus}" MinHeight="48" AcceptsReturn="True" TextWrapping="Wrap" />
-                            <TextBlock Text="Tiêu chí thành công" Margin="0,14,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding SuccessCriteria, UpdateSourceTrigger=LostFocus}" MinHeight="62" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
-                            <TextBlock Text="Bước tiếp theo" Margin="0,14,0,5" FontWeight="SemiBold" />
-                            <TextBox Text="{Binding NextAction, UpdateSourceTrigger=LostFocus}" MinHeight="52" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
-                            <CheckBox Content="Yêu cầu ảnh minh chứng khi hoàn thành" IsChecked="{Binding RequiresEvidence}" Margin="0,16,0,0" />
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <StackPanel Margin="0,0,8,0">
+                                        <TextBlock Text="MỤC TIÊU VÀ BỐI CẢNH" Style="{StaticResource SectionTitle}" />
+                                        <TextBlock Text="Tên bài toán *" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding Title, UpdateSourceTrigger=LostFocus}" />
+                                        <TextBlock Text="Mục tiêu cần đạt *" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+                                        <TextBox Text="{Binding Goal, UpdateSourceTrigger=LostFocus}" MinHeight="70" Style="{StaticResource MultilineBox}" />
+                                        <TextBlock Text="Tiêu chí thành công" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+                                        <TextBox Text="{Binding SuccessCriteria, UpdateSourceTrigger=LostFocus}" MinHeight="70" Style="{StaticResource MultilineBox}" />
+                                        <TextBlock Text="Bước tiếp theo" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+                                        <TextBox Text="{Binding NextAction, UpdateSourceTrigger=LostFocus}" MinHeight="52" Style="{StaticResource MultilineBox}" />
+                                        <TextBlock Text="Mô tả hoặc điều kiện phạm vi" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+                                        <TextBox Text="{Binding Description, UpdateSourceTrigger=LostFocus}" MinHeight="52" Style="{StaticResource MultilineBox}" />
+                                        <CheckBox Content="Yêu cầu ảnh minh chứng khi hoàn thành" IsChecked="{Binding RequiresEvidence}" Margin="0,14,0,4" />
+                                    </StackPanel>
+                                </ScrollViewer>
 
-                            <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,22,0,18"
-                                    Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                            <StackPanel Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="TRẠNG THÁI" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
-                                <WrapPanel Margin="0,10,0,0">
-                                    <Button Content="Bắt đầu / tiếp tục" Command="{Binding MoveToInProgressCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                    <Button Content="Đánh dấu bị chặn" Command="{Binding MoveToBlockedCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                    <Button Content="Xác nhận hoàn thành" Command="{Binding ResolveCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                </WrapPanel>
-                            </StackPanel>
+                                <Grid Grid.Column="2">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" MinHeight="86" />
+                                        <RowDefinition Height="*" MinHeight="86" />
+                                        <RowDefinition Height="*" MinHeight="86" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
 
-                            <Border Background="#F5F8F6" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,12,0,0"
-                                    Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <DockPanel>
-                                        <StackPanel>
-                                            <TextBlock Text="Phân rã phạm vi" FontSize="17" FontWeight="SemiBold" />
-                                            <TextBlock Text="Chia bài toán thành câu hỏi hoặc kết quả nhỏ." Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" />
-                                        </StackPanel>
+                                    <StackPanel Grid.ColumnSpan="3">
+                                        <TextBlock Text="PHÂN TÍCH 5W–1H" Style="{StaticResource SectionTitle}" Margin="0,0,0,2" />
+                                        <TextBlock Text="Điền những gì đã biết, có thể để trống phần chưa rõ." Margin="0,0,0,8" Foreground="{StaticResource MutedBrush}" />
+                                    </StackPanel>
+
+                                    <DockPanel Grid.Row="1" Margin="0,0,0,10">
+                                        <TextBlock DockPanel.Dock="Top" Text="What · Vấn đề / kết quả cần đạt" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding AnalysisWhat, UpdateSourceTrigger=LostFocus}" Style="{StaticResource MultilineBox}" />
+                                    </DockPanel>
+                                    <DockPanel Grid.Row="1" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock DockPanel.Dock="Top" Text="Why · Lý do cần giải quyết" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding AnalysisWhy, UpdateSourceTrigger=LostFocus}" Style="{StaticResource MultilineBox}" />
+                                    </DockPanel>
+                                    <DockPanel Grid.Row="2" Margin="0,0,0,10">
+                                        <TextBlock DockPanel.Dock="Top" Text="Who · Người / đối tượng liên quan" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding AnalysisWho, UpdateSourceTrigger=LostFocus}" Style="{StaticResource MultilineBox}" />
+                                    </DockPanel>
+                                    <DockPanel Grid.Row="2" Grid.Column="2" Margin="0,0,0,10">
+                                        <TextBlock DockPanel.Dock="Top" Text="Where · Bối cảnh / môi trường" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding AnalysisWhere, UpdateSourceTrigger=LostFocus}" Style="{StaticResource MultilineBox}" />
+                                    </DockPanel>
+                                    <DockPanel Grid.Row="3">
+                                        <TextBlock DockPanel.Dock="Top" Text="When · Thời điểm / điều kiện" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding AnalysisWhen, UpdateSourceTrigger=LostFocus}" Style="{StaticResource MultilineBox}" />
+                                    </DockPanel>
+                                    <DockPanel Grid.Row="3" Grid.Column="2">
+                                        <TextBlock DockPanel.Dock="Top" Text="How · Hướng tiếp cận / giả thuyết" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding AnalysisHow, UpdateSourceTrigger=LostFocus}" Style="{StaticResource MultilineBox}" />
+                                    </DockPanel>
+                                </Grid>
+                            </Grid>
+                        </TabItem>
+
+                        <!-- TAB 2: PHẠM VI (danh sách | form chỉnh sửa) -->
+                        <TabItem Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Phạm vi" />
+                                    <TextBlock Text="{Binding ScopeItems.Count, StringFormat=' ({0})'}" />
+                                </StackPanel>
+                            </TabItem.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="1*" />
+                                </Grid.ColumnDefinitions>
+                                <DockPanel>
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                                         <Button Content="＋ Mục nhỏ" Command="{Binding NewScopeItemCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" />
+                                        <StackPanel>
+                                            <TextBlock Text="Phân rã phạm vi" FontSize="16" FontWeight="SemiBold" />
+                                            <TextBlock Text="Chia bài toán thành câu hỏi hoặc kết quả nhỏ." Foreground="{StaticResource MutedBrush}" />
+                                        </StackPanel>
                                     </DockPanel>
                                     <ListBox ItemsSource="{Binding ScopeItems}" SelectedItem="{Binding SelectedScopeItem, Mode=TwoWay}"
-                                             BorderThickness="0" Background="Transparent" Margin="0,12,0,4" MaxHeight="190">
+                                             BorderBrush="{StaticResource LineBrush}" Background="#FAFBFA" HorizontalContentAlignment="Stretch"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Background="White" CornerRadius="7" Padding="11" Margin="0,0,0,6">
+                                                <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="7" Padding="11" Margin="0,0,0,2">
                                                     <DockPanel>
-                                                        <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}" Margin="12,0,0,0" />
+                                                        <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Right" Foreground="{StaticResource AccentBrush}" FontSize="12" FontWeight="SemiBold" Margin="12,0,0,0" VerticalAlignment="Top" />
                                                         <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
                                                     </DockPanel>
                                                 </Border>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                    <TextBlock Text="Mục tiêu nhỏ" Margin="0,10,0,5" FontWeight="SemiBold" />
-                                    <TextBox Text="{Binding ScopeTitle, UpdateSourceTrigger=LostFocus}" />
-                                    <TextBlock Text="Lý do hoặc ngữ cảnh (tùy chọn)" Margin="0,10,0,5" FontWeight="SemiBold" />
-                                    <TextBox Text="{Binding ScopeReason, UpdateSourceTrigger=LostFocus}" MinHeight="50" AcceptsReturn="True" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding ScopeMessage}" Margin="0,8,0,0" Foreground="#A33A32" TextWrapping="Wrap" />
-                                    <WrapPanel Margin="0,12,0,0">
-                                        <Button Content="Lưu mục" Command="{Binding SaveScopeItemCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Trong phạm vi" Command="{Binding ScopeInScopeCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Để sau" Command="{Binding ScopeBacklogCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Đã xử lý" Command="{Binding ScopeDoneCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Loại bỏ" Command="{Binding ScopeExcludedCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Xóa mục" Command="{Binding DeleteScopeItemCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                    </WrapPanel>
-                                </StackPanel>
-                            </Border>
+                                </DockPanel>
+                                <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel Margin="0,0,6,0">
+                                        <TextBlock Text="MỤC ĐANG CHỈNH SỬA" Style="{StaticResource SectionTitle}" />
+                                        <TextBlock Text="Mục tiêu nhỏ" Style="{StaticResource FieldLabel}" />
+                                        <TextBox Text="{Binding ScopeTitle, UpdateSourceTrigger=LostFocus}" />
+                                        <TextBlock Text="Lý do hoặc ngữ cảnh (tùy chọn)" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+                                        <TextBox Text="{Binding ScopeReason, UpdateSourceTrigger=LostFocus}" MinHeight="80" Style="{StaticResource MultilineBox}" />
+                                        <TextBlock Text="{Binding ScopeMessage}" Margin="0,8,0,0" Foreground="#A33A32" TextWrapping="Wrap" />
+                                        <Button Content="Lưu mục" Command="{Binding SaveScopeItemCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Left" Margin="0,12,0,0" />
+                                        <TextBlock Text="ĐỔI TRẠNG THÁI" Style="{StaticResource SectionTitle}" Margin="0,20,0,8" />
+                                        <WrapPanel>
+                                            <Button Content="Trong phạm vi" Command="{Binding ScopeInScopeCommand}" Style="{StaticResource CompactButton}" Margin="0,0,6,6" />
+                                            <Button Content="Để sau" Command="{Binding ScopeBacklogCommand}" Style="{StaticResource CompactButton}" Margin="0,0,6,6" />
+                                            <Button Content="Đã xử lý" Command="{Binding ScopeDoneCommand}" Style="{StaticResource CompactButton}" Margin="0,0,6,6" />
+                                            <Button Content="Loại bỏ" Command="{Binding ScopeExcludedCommand}" Style="{StaticResource CompactButton}" Margin="0,0,6,6" />
+                                            <Button Content="Xóa mục" Command="{Binding DeleteScopeItemCommand}" Style="{StaticResource CompactButton}" Margin="0,0,6,6" />
+                                        </WrapPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Grid>
+                        </TabItem>
 
-                            <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,12,0,0"
-                                    Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock Text="Ảnh minh chứng" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="Ảnh được lưu cùng dữ liệu riêng của PathForge · tối đa 5 MB mỗi ảnh." Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                                    <TextBox Text="{Binding EvidenceDescription, UpdateSourceTrigger=LostFocus}" Margin="0,12,0,0" ToolTip="Mô tả ảnh (tùy chọn)" />
+                        <!-- TAB 3: MINH CHỨNG (danh sách | xem trước) -->
+                        <TabItem Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TabItem.Header>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Minh chứng" />
+                                    <TextBlock Text="{Binding EvidenceItems.Count, StringFormat=' ({0})'}" />
+                                </StackPanel>
+                            </TabItem.Header>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*" MinWidth="260" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="1.2*" />
+                                </Grid.ColumnDefinitions>
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Top">
+                                        <TextBlock Text="Ảnh minh chứng" FontSize="16" FontWeight="SemiBold" />
+                                        <TextBlock Text="Lưu cùng dữ liệu của PathForge · tối đa 5 MB mỗi ảnh." Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,2,0,8" />
+                                        <TextBox Text="{Binding EvidenceDescription, UpdateSourceTrigger=LostFocus}" ToolTip="Mô tả ảnh (tùy chọn)" />
+                                        <WrapPanel Margin="0,10,0,8">
+                                            <Button Content="Thêm ảnh" Command="{Binding AddEvidenceCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,6,0" Padding="12,7" MinHeight="34" />
+                                            <Button Content="Mở ảnh" Command="{Binding OpenEvidenceCommand}" Style="{StaticResource CompactButton}" />
+                                            <Button Content="Xóa ảnh" Command="{Binding DeleteEvidenceCommand}" Style="{StaticResource CompactButton}" />
+                                        </WrapPanel>
+                                        <TextBlock Text="{Binding EvidenceMessage}" Foreground="#A33A32" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                    </StackPanel>
                                     <ListBox ItemsSource="{Binding EvidenceItems}" SelectedItem="{Binding SelectedEvidence, Mode=TwoWay}"
-                                             BorderThickness="0" Background="Transparent" Margin="0,10,0,4" MaxHeight="150">
+                                             BorderBrush="{StaticResource LineBrush}" Background="#FAFBFA" HorizontalContentAlignment="Stretch">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
-                                                <Border Background="#F6F8F6" CornerRadius="7" Padding="10" Margin="0,0,0,5">
-                                                    <StackPanel>
-                                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                                                        <TextBlock Text="{Binding Description}" Margin="0,3,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                                                    </StackPanel>
-                                                </Border>
+                                                <StackPanel Margin="4">
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                                                </StackPanel>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                    <TextBlock Text="{Binding EvidenceMessage}" Foreground="#A33A32" TextWrapping="Wrap" />
-                                    <Image Source="{Binding SelectedEvidence.AbsolutePath, Converter={StaticResource EvidencePreviewConverter}}"
-                                           MaxHeight="240" MaxWidth="420" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,8,0,0"
-                                           Visibility="{Binding HasSelectedEvidence, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                    <WrapPanel Margin="0,10,0,0">
-                                        <Button Content="Thêm ảnh" Command="{Binding AddEvidenceCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Mở ảnh đã chọn" Command="{Binding OpenEvidenceCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                        <Button Content="Xóa ảnh đã chọn" Command="{Binding DeleteEvidenceCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
-                                    </WrapPanel>
-                                </StackPanel>
-                            </Border>
+                                </DockPanel>
+                                <Border Grid.Column="2" Background="#F6F8F6" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10" Padding="10">
+                                    <Grid>
+                                        <TextBlock Text="Chọn một ảnh để xem trước." Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   Visibility="{Binding HasSelectedEvidence, Converter={StaticResource InverseVisibilityConverter}}" />
+                                        <Image Source="{Binding SelectedEvidence.AbsolutePath, Converter={StaticResource EvidencePreviewConverter}}" Stretch="Uniform"
+                                               Visibility="{Binding HasSelectedEvidence, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    </Grid>
+                                </Border>
+                            </Grid>
+                        </TabItem>
 
-                            <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,12,0,0"
-                                    Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <StackPanel>
-                                    <TextBlock Text="Các phiên gần đây" FontSize="17" FontWeight="SemiBold" />
-                                    <ListBox ItemsSource="{Binding RecentWorkLogs}" SelectedItem="{Binding SelectedWorkLog, Mode=TwoWay}"
-                                             BorderThickness="0" Background="Transparent" Margin="0,8,0,4" MaxHeight="180">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <Border Background="#F6F8F6" CornerRadius="7" Padding="10" Margin="0,0,0,5">
-                                                    <StackPanel>
-                                                        <DockPanel>
-                                                            <TextBlock Text="{Binding StatusText}" DockPanel.Dock="Right" Foreground="{StaticResource MutedBrush}" Margin="10,0,0,0" />
-                                                            <TextBlock Text="{Binding TaskTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                                        </DockPanel>
-                                                        <TextBlock Text="{Binding Summary}" Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" MaxHeight="40" />
-                                                    </StackPanel>
-                                                </Border>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                    <Button Content="Mở báo cáo phiên đã chọn" Command="{Binding OpenWorkLogCommand}" Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" />
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
+                        <!-- TAB 4: PHIÊN GẦN ĐÂY (danh sách | nội dung báo cáo) -->
+                        <TabItem Header="Phiên gần đây" Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1*" MinWidth="240" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="1.4*" />
+                                </Grid.ColumnDefinitions>
+                                <ListBox ItemsSource="{Binding RecentWorkLogs}" SelectedItem="{Binding SelectedWorkLog, Mode=TwoWay}"
+                                         BorderBrush="{StaticResource LineBrush}" Background="#FAFBFA" HorizontalContentAlignment="Stretch"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="4">
+                                                <TextBlock Text="{Binding TaskTitle}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <DockPanel Margin="0,3,0,0">
+                                                    <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontSize="12" />
+                                                    <TextBlock Text="{Binding DateText}" DockPanel.Dock="Right" HorizontalAlignment="Right" Foreground="{StaticResource MutedBrush}" FontSize="12" />
+                                                </DockPanel>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <DockPanel Grid.Column="2">
+                                    <Button DockPanel.Dock="Bottom" Content="Mở phiên đã chọn" Command="{Binding OpenWorkLogCommand}" Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <StackPanel Margin="0,0,6,0">
+                                            <TextBlock Text="{Binding SelectedWorkLog.TaskTitle}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding SelectedWorkLog.ScopeContext}" Foreground="{StaticResource MutedBrush}" Margin="0,3,0,10" TextWrapping="Wrap" />
+                                            <TextBlock Text="Kết quả" Style="{StaticResource FieldLabel}" />
+                                            <TextBlock Text="{Binding SelectedWorkLog.Result}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                            <TextBlock Text="Điều đã học" Style="{StaticResource FieldLabel}" />
+                                            <TextBlock Text="{Binding SelectedWorkLog.Learned}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                            <TextBlock Text="Trở ngại" Style="{StaticResource FieldLabel}" />
+                                            <TextBlock Text="{Binding SelectedWorkLog.Blocker}" TextWrapping="Wrap" Margin="0,0,0,10" />
+                                            <TextBlock Text="Bước tiếp theo" Style="{StaticResource FieldLabel}" />
+                                            <TextBlock Text="{Binding SelectedWorkLog.NextStep}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </DockPanel>
+                            </Grid>
+                        </TabItem>
+                    </TabControl>
 
-                    <Border Grid.Row="3" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0" Margin="0,10,0,0">
-                        <DockPanel LastChildFill="False">
-                            <TextBlock Text="{Binding ValidationMessage}" Foreground="#A33A32" TextWrapping="Wrap" VerticalAlignment="Center" MaxWidth="430" />
+                    <!-- Footer cố định: luôn thấy nút Lưu -->
+                    <Border Grid.Row="2" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,10,0,0">
+                        <DockPanel>
                             <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
                                 <Button Content="Xóa" Command="{Binding DeleteCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"
                                         Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}" />
@@ -231,6 +382,7 @@
                                         Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <Button Content="{Binding SaveButtonText}" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButtonStyle}" />
                             </WrapPanel>
+                            <TextBlock Text="{Binding ValidationMessage}" Foreground="#A33A32" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
                         </DockPanel>
                     </Border>
                 </Grid>
