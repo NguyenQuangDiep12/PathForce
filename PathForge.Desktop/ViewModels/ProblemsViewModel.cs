@@ -142,7 +142,22 @@ public sealed class ProblemsViewModel : ObservableObject
     public string ScopeMessage { get => _scopeMessage; private set => SetProperty(ref _scopeMessage, value); }
     public string EvidenceDescription { get => _evidenceDescription; set => SetProperty(ref _evidenceDescription, value); }
     public string EvidenceMessage { get => _evidenceMessage; private set => SetProperty(ref _evidenceMessage, value); }
-    public bool IsNew { get => _isNew; private set => SetProperty(ref _isNew, value); }
+    public bool IsNew
+    {
+        get => _isNew;
+        private set
+        {
+            if (!SetProperty(ref _isNew, value))
+                return;
+            OnPropertyChanged(nameof(EditorModeText));
+            OnPropertyChanged(nameof(SaveButtonText));
+            OnPropertyChanged(nameof(IsExisting));
+        }
+    }
+    public string EditorModeText => IsNew
+        ? "Đang tạo bài toán mới. Lưu sẽ thêm một bài toán riêng."
+        : "Đang chỉnh sửa bài toán đã chọn. Lưu sẽ cập nhật bài toán này.";
+    public string SaveButtonText => IsNew ? "Tạo bài toán" : "Lưu thay đổi";
     public bool IsExisting => !IsNew && _selectedProblemId.HasValue;
     public bool HasProblems => Problems.Count > 0;
     public bool HasUnsavedChanges => CaptureFormState() != _savedFormState;
@@ -377,8 +392,12 @@ public sealed class ProblemsViewModel : ObservableObject
             return;
         }
 
-        var createsNewProblem = !_selectedProblemId.HasValue;
-        var result = await _problemService.SaveAsync(_selectedProblemId, new ProblemDraft
+        // IsNew represents the form's intent. Ignore any stale list selection ID
+        // while the user is creating a new problem, so a delayed binding update
+        // cannot turn an insert into an update of the most recently selected row.
+        var problemId = IsNew ? null : _selectedProblemId;
+        var createsNewProblem = !problemId.HasValue;
+        var result = await _problemService.SaveAsync(problemId, new ProblemDraft
         {
             Title = Title,
             Goal = Goal,
@@ -400,16 +419,31 @@ public sealed class ProblemsViewModel : ObservableObject
             return;
         }
 
-        IsNew = false;
-        _selectedProblemId = result.ProblemId;
-        _savedFormState = CaptureFormState();
         Keyword = string.Empty;
         if (refreshAfterSave)
         {
-            await RefreshAsync(result.ProblemId);
-            ProblemChanged?.Invoke();
             if (createsNewProblem)
+            {
+                // Clear the draft before rebuilding the list. Re-selecting the
+                // inserted row and clearing it afterward allowed the list's
+                // SelectedItem binding to restore that row's ID in some cases.
                 BeginNewProblem();
+                await RefreshAsync();
+            }
+            else
+            {
+                IsNew = false;
+                _selectedProblemId = result.ProblemId;
+                _savedFormState = CaptureFormState();
+                await RefreshAsync(result.ProblemId);
+            }
+            ProblemChanged?.Invoke();
+        }
+        else
+        {
+            IsNew = false;
+            _selectedProblemId = result.ProblemId;
+            _savedFormState = CaptureFormState();
         }
     }
 

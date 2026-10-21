@@ -2,58 +2,95 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <Grid Margin="52,40" MaxWidth="960" HorizontalAlignment="Left">
+        <Grid Margin="40,34" MaxWidth="1120" HorizontalAlignment="Center">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="24" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="26" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <StackPanel>
-                <TextBlock Text="Tổng quan" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                <TextBlock Text="Bắt đầu từ việc quan trọng nhất cần giải quyết." Margin="0,8,0,0" FontSize="15" Foreground="{StaticResource MutedBrush}" />
-            </StackPanel>
-            <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="28">
-                <Grid>
-                    <StackPanel Visibility="{Binding HasProblem, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="BÀI TOÁN ĐANG THEO DÕI" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
-                        <TextBlock Text="{Binding CurrentProblem.Title}" Margin="0,12,0,0" FontSize="23" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding CurrentProblem.Goal}" Margin="0,9,0,0" FontSize="15" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                        <Border Background="#EEF3EF" CornerRadius="14" Padding="12,5" HorizontalAlignment="Left" Margin="0,18,0,0">
-                            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
-                        </Border>
-                        <TextBlock Text="Bước tiếp theo" Margin="0,22,0,5" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                        <TextBlock Text="{Binding NextActionText}" FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource InkBrush}" />
-                        <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="13" Margin="0,18,0,0"
-                                Visibility="{Binding HasOpenSession, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="{Binding OpenSessionText}" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                                    <TextBlock Text="{Binding OpenSession.TaskTitle}" Margin="0,3,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Button Content="Mở phiên" Command="{Binding OpenSessionCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="12,0,0,0" />
-                            </DockPanel>
-                        </Border>
-                        <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="13" Margin="0,10,0,0"
-                                Visibility="{Binding HasRecentReport, Converter={StaticResource BooleanToVisibilityConverter}}">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Left">
-                                    <TextBlock Text="Kết quả phiên gần nhất" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                                    <TextBlock Text="{Binding RecentReportSummary}" Margin="0,3,0,0" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <Button Content="Xem báo cáo" Command="{Binding OpenRecentReportCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="12,0,0,0" />
-                            </DockPanel>
-                        </Border>
-                        <WrapPanel Margin="0,24,0,0">
-                            <Button Content="Tiếp tục thực hiện" Command="{Binding ContinueWorkCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,8" />
-                            <Button Content="Mở bài toán" Command="{Binding OpenProblemCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
+            <DockPanel LastChildFill="False">
+                <StackPanel>
+                    <TextBlock Text="Tổng quan" FontSize="30" FontWeight="SemiBold" />
+                    <TextBlock Text="Một nơi để chọn việc quan trọng và theo dõi tiến độ." Margin="0,5,0,0" FontSize="15" Foreground="{StaticResource MutedBrush}" />
+                </StackPanel>
+                <Button Content="＋  Tạo bài toán" Command="{Binding CreateProblemCommand}" Style="{StaticResource PrimaryButtonStyle}"
+                        DockPanel.Dock="Right" VerticalAlignment="Center" Margin="18,0,0,0"
+                        Visibility="{Binding HasProblem, Converter={StaticResource InverseVisibilityConverter}}" />
+                <Button Content="Tiếp tục thực hiện" Command="{Binding ContinueWorkCommand}" Style="{StaticResource PrimaryButtonStyle}"
+                        DockPanel.Dock="Right" VerticalAlignment="Center" Margin="18,0,0,0"
+                        Visibility="{Binding HasProblem, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </DockPanel>
+
+            <Grid Grid.Row="2" Visibility="{Binding HasProblem, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.7*" />
+                    <ColumnDefinition Width="20" />
+                    <ColumnDefinition Width="1*" />
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14" Padding="30">
+                    <StackPanel>
+                        <DockPanel>
+                            <TextBlock Text="BÀI TOÁN ĐANG THEO DÕI" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <Border Background="{StaticResource AccentSoftBrush}" CornerRadius="12" Padding="10,4" DockPanel.Dock="Right">
+                                <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" FontSize="12" />
+                            </Border>
+                        </DockPanel>
+                        <TextBlock Text="{Binding CurrentProblem.Title}" Margin="0,22,0,0" FontSize="27" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding CurrentProblem.Goal}" Margin="0,10,0,0" FontSize="15" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                        <Border Height="1" Background="{StaticResource LineBrush}" Margin="0,26,0,22" />
+                        <TextBlock Text="BƯỚC TIẾP THEO" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                        <TextBlock Text="{Binding NextActionText}" FontSize="16" Margin="0,8,0,0" TextWrapping="Wrap" />
+                        <WrapPanel Margin="0,26,0,0">
+                            <Button Content="Mở bài toán" Command="{Binding OpenProblemCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,9,8" />
+                            <Button Content="Xem báo cáo gần nhất" Command="{Binding OpenRecentReportCommand}" Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,0,9,8" Visibility="{Binding HasRecentReport, Converter={StaticResource BooleanToVisibilityConverter}}" />
                         </WrapPanel>
                     </StackPanel>
-                    <StackPanel Visibility="{Binding HasProblem, Converter={StaticResource InverseVisibilityConverter}}">
-                        <TextBlock Text="Chưa có bài toán nào" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
-                        <TextBlock Text="Tạo một bài toán với mục tiêu rõ ràng để bắt đầu ghi lại quá trình giải quyết." Margin="0,10,0,0" FontSize="15" TextWrapping="Wrap" Foreground="{StaticResource MutedBrush}" />
-                        <Button Content="Tạo bài toán" Command="{Binding CreateProblemCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Left" Margin="0,22,0,0" />
-                    </StackPanel>
-                </Grid>
+                </Border>
+
+                <StackPanel Grid.Column="2">
+                    <Border Background="{StaticResource AccentBrush}" CornerRadius="14" Padding="20"
+                            Visibility="{Binding HasOpenSession, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="PHIÊN ĐANG MỞ" FontSize="11" FontWeight="Bold" Foreground="#CDE3D8" />
+                            <TextBlock Text="{Binding OpenSessionText}" FontSize="19" FontWeight="SemiBold" Foreground="White" Margin="0,10,0,0" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding OpenSession.TaskTitle}" FontSize="14" Foreground="#E8F1EC" Margin="0,5,0,0" TextWrapping="Wrap" />
+                            <Button Content="Quay lại phiên" Command="{Binding OpenSessionCommand}" Background="White" Foreground="{StaticResource AccentBrush}"
+                                    Style="{StaticResource SecondaryButtonStyle}" HorizontalAlignment="Left" Margin="0,18,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Border Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14" Padding="20" Margin="0,14,0,0"
+                            Visibility="{Binding HasRecentReport, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="KẾT QUẢ PHIÊN GẦN NHẤT" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock Text="{Binding RecentReportSummary}" FontSize="14" Margin="0,10,0,0" TextWrapping="Wrap" />
+                            <Button Content="Mở báo cáo" Command="{Binding OpenRecentReportCommand}" Style="{StaticResource SecondaryButtonStyle}"
+                                    HorizontalAlignment="Left" Margin="0,16,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <Border Background="#EAF1ED" CornerRadius="14" Padding="20" Margin="0,14,0,0"
+                            Visibility="{Binding HasOpenSession, Converter={StaticResource InverseVisibilityConverter}}">
+                        <StackPanel>
+                            <TextBlock Text="Giữ nhịp tiến độ" FontSize="17" FontWeight="SemiBold" />
+                            <TextBlock Text="Chia bài toán thành một nhiệm vụ nhỏ, tập trung xử lý rồi ghi lại kết quả." Margin="0,7,0,0"
+                                       Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <Border Grid.Row="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14" Padding="34"
+                    Visibility="{Binding HasProblem, Converter={StaticResource InverseVisibilityConverter}}">
+                <StackPanel MaxWidth="530" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Border Width="54" Height="54" CornerRadius="16" Background="{StaticResource AccentSoftBrush}" HorizontalAlignment="Center">
+                        <TextBlock Text="◎" FontSize="30" Foreground="{StaticResource AccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="Bắt đầu từ một bài toán" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,18,0,0" />
+                    <TextBlock Text="Ghi lại điều bạn muốn giải quyết, xác định kết quả cần đạt rồi chia thành bước nhỏ." Foreground="{StaticResource MutedBrush}"
+                               FontSize="15" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
+                    <Button Content="＋  Tạo bài toán đầu tiên" Command="{Binding CreateProblemCommand}" Style="{StaticResource PrimaryButtonStyle}"
+                            HorizontalAlignment="Center" Margin="0,20,0,0" />
+                </StackPanel>
             </Border>
         </Grid>
     </ScrollViewer>

@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:PathForge.Desktop.Views"
         xmlns:vm="clr-namespace:PathForge.Desktop.ViewModels"
-        Title="PathForge" Height="760" Width="1240" MinHeight="620" MinWidth="980"
-        WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}" Closing="Window_Closing">
+        Title="PathForge" Height="820" Width="1360" MinHeight="680" MinWidth="1040"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}" Foreground="{StaticResource InkBrush}" Closing="Window_Closing">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><views:DashboardView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:ProblemsViewModel}"><views:ProblemsView /></DataTemplate>
@@ -19,22 +19,32 @@
         </DataTemplate>
         <Style x:Key="NavigationButtonStyle" TargetType="Button">
             <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Padding" Value="13,11" />
             <Setter Property="Margin" Value="0,3" />
+            <Setter Property="MinHeight" Value="46" />
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#D8DED9" />
+            <Setter Property="Foreground" Value="#C7D4CD" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}"><ContentPresenter /></Border>
+                        <Border x:Name="NavigationChrome" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#30483F" />
+                                <Setter TargetName="NavigationChrome" Property="Background" Value="#263F35" />
                                 <Setter Property="Foreground" Value="White" />
                             </Trigger>
+                            <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" Value="True">
+                                <Setter TargetName="NavigationChrome" Property="Background" Value="#315B4B" />
+                                <Setter Property="Foreground" Value="White" />
+                            </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -42,20 +52,48 @@
         </Style>
     </Window.Resources>
     <Grid>
-        <Grid.ColumnDefinitions><ColumnDefinition Width="224" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-        <Border Grid.Column="0" Background="#202D28">
-            <DockPanel LastChildFill="True" Margin="18,22">
-                <StackPanel DockPanel.Dock="Top">
-                    <TextBlock Text="PathForge" FontSize="24" FontWeight="Bold" Foreground="White" Margin="10,2,0,30" />
-                    <Button Content="Tổng quan" Command="{Binding ShowDashboardCommand}" Style="{StaticResource NavigationButtonStyle}" />
-                    <Button Content="Bài toán" Command="{Binding ShowProblemsCommand}" Style="{StaticResource NavigationButtonStyle}" />
-                    <Button Content="Thực hiện" Command="{Binding ShowPracticeCommand}" Style="{StaticResource NavigationButtonStyle}" />
-                    <Button Content="Lịch sử" Command="{Binding ShowHistoryCommand}" Style="{StaticResource NavigationButtonStyle}" />
-                    <Button Content="Tài liệu kiến thức" Command="{Binding ShowKnowledgeDocumentsCommand}" Style="{StaticResource NavigationButtonStyle}" />
+        <Grid.ColumnDefinitions><ColumnDefinition Width="244" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+        <Border Grid.Column="0" Background="{StaticResource SidebarBrush}">
+            <Grid Margin="18,22">
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" Margin="4,3,0,28">
+                    <Border Width="38" Height="38" CornerRadius="11" Background="#3B8067" VerticalAlignment="Center">
+                        <TextBlock Text="P" Foreground="White" FontSize="23" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="PathForge" FontSize="21" FontWeight="Bold" Foreground="White" />
+                        <TextBlock Text="GIẢI QUYẾT CÓ HỆ THỐNG" FontSize="9" FontWeight="SemiBold" Foreground="#9CB6A9" Margin="0,2,0,0" />
+                    </StackPanel>
                 </StackPanel>
-                <TextBlock DockPanel.Dock="Bottom" Text="Bản MVP · lưu trên máy này" Foreground="#9EAAA3" FontSize="11" Margin="10,20,0,2" />
-            </DockPanel>
+                <TextBlock Grid.Row="1" Text="KHÔNG GIAN LÀM VIỆC" FontSize="10" FontWeight="Bold"
+                           Foreground="#8EA79A" Margin="10,0,0,9" />
+                <StackPanel Grid.Row="2">
+                    <Button Command="{Binding ShowDashboardCommand}" Tag="{Binding IsDashboardActive}" Style="{StaticResource NavigationButtonStyle}">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="⌂" Width="28" FontSize="19"/><TextBlock Text="Tổng quan" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button Command="{Binding ShowProblemsCommand}" Tag="{Binding IsProblemsActive}" Style="{StaticResource NavigationButtonStyle}">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="◎" Width="28" FontSize="18"/><TextBlock Text="Bài toán" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button Command="{Binding ShowPracticeCommand}" Tag="{Binding IsPracticeActive}" Style="{StaticResource NavigationButtonStyle}">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="▷" Width="28" FontSize="17"/><TextBlock Text="Thực hiện" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button Command="{Binding ShowHistoryCommand}" Tag="{Binding IsHistoryActive}" Style="{StaticResource NavigationButtonStyle}">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="↺" Width="28" FontSize="19"/><TextBlock Text="Lịch sử" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                    <Button Command="{Binding ShowKnowledgeDocumentsCommand}" Tag="{Binding IsKnowledgeDocumentsActive}" Style="{StaticResource NavigationButtonStyle}">
+                        <StackPanel Orientation="Horizontal"><TextBlock Text="▤" Width="28" FontSize="17"/><TextBlock Text="Tài liệu kiến thức" VerticalAlignment="Center"/></StackPanel>
+                    </Button>
+                </StackPanel>
+                <Border Grid.Row="3" Background="#203B30" BorderBrush="#315B4B" BorderThickness="1" CornerRadius="10" Padding="12" Margin="2,16,2,2">
+                    <StackPanel>
+                        <TextBlock Text="DỮ LIỆU CÁ NHÂN" FontSize="10" FontWeight="Bold" Foreground="#A9C6B8" />
+                        <TextBlock Text="Được lưu trên thiết bị này." FontSize="12" Foreground="#E1EBE5" TextWrapping="Wrap" Margin="0,5,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Border>
-        <ContentControl Grid.Column="1" Content="{Binding CurrentViewModel}" />
+        <Border Grid.Column="1" Background="{StaticResource CanvasBrush}">
+            <ContentControl Content="{Binding CurrentViewModel}" />
+        </Border>
     </Grid>
 </Window>

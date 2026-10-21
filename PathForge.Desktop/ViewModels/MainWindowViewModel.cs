@@ -64,7 +64,25 @@ public sealed class MainWindowViewModel : ObservableObject
     public WorkSessionViewModel WorkSession { get; }
     public HistoryViewModel History { get; }
     public KnowledgeDocumentsViewModel KnowledgeDocuments { get; }
-    public object CurrentViewModel { get => _currentViewModel; private set => SetProperty(ref _currentViewModel, value); }
+    public object CurrentViewModel
+    {
+        get => _currentViewModel;
+        private set
+        {
+            if (!SetProperty(ref _currentViewModel, value))
+                return;
+            OnPropertyChanged(nameof(IsDashboardActive));
+            OnPropertyChanged(nameof(IsProblemsActive));
+            OnPropertyChanged(nameof(IsPracticeActive));
+            OnPropertyChanged(nameof(IsHistoryActive));
+            OnPropertyChanged(nameof(IsKnowledgeDocumentsActive));
+        }
+    }
+    public bool IsDashboardActive => ReferenceEquals(CurrentViewModel, Dashboard);
+    public bool IsProblemsActive => ReferenceEquals(CurrentViewModel, Problems);
+    public bool IsPracticeActive => ReferenceEquals(CurrentViewModel, WorkSession);
+    public bool IsHistoryActive => ReferenceEquals(CurrentViewModel, History);
+    public bool IsKnowledgeDocumentsActive => ReferenceEquals(CurrentViewModel, KnowledgeDocuments);
     public RelayCommand ShowDashboardCommand { get; }
     public RelayCommand ShowProblemsCommand { get; }
     public RelayCommand ShowPracticeCommand { get; }

@@ -30,8 +30,16 @@ public sealed class ProblemsViewModelTests
         viewModel.Goal = "Mục tiêu thứ hai";
         Assert.True(await viewModel.SavePendingChangesAsync());
 
-        Assert.Equal(new int?[] { null, null }, problems.SavedIds);
-        Assert.Equal(2, problems.Count);
+        Assert.Equal(string.Empty, viewModel.Title);
+        Assert.Equal(string.Empty, viewModel.Goal);
+        Assert.Null(viewModel.SelectedProblem);
+
+        viewModel.Title = "Bài toán thứ ba";
+        viewModel.Goal = "Mục tiêu thứ ba";
+        Assert.True(await viewModel.SavePendingChangesAsync());
+
+        Assert.Equal(new int?[] { null, null, null }, problems.SavedIds);
+        Assert.Equal(3, problems.Count);
         Assert.Equal(string.Empty, viewModel.Title);
     }
 
@@ -52,6 +60,28 @@ public sealed class ProblemsViewModelTests
         Assert.Equal(new int?[] { null, 1 }, problems.SavedIds);
         Assert.Equal("Bài toán đã chỉnh sửa", viewModel.Title);
         Assert.Equal(1, viewModel.SelectedProblem?.Id);
+    }
+
+    [Fact]
+    public async Task StartingNewProblemFromAnExistingOneMakesNextSaveCreateInsteadOfUpdate()
+    {
+        var problems = new FakeProblemService();
+        var viewModel = CreateViewModel(problems);
+        viewModel.Title = "Bài toán cũ";
+        viewModel.Goal = "Mục tiêu cũ";
+        Assert.True(await viewModel.SavePendingChangesAsync());
+
+        await viewModel.OpenProblemAsync(1);
+        viewModel.FocusNewProblem();
+        viewModel.Title = "Bài toán mới";
+        viewModel.Goal = "Mục tiêu mới";
+
+        Assert.True(viewModel.IsNew);
+        Assert.Equal("Tạo bài toán", viewModel.SaveButtonText);
+        Assert.True(await viewModel.SavePendingChangesAsync());
+
+        Assert.Equal(new int?[] { null, null }, problems.SavedIds);
+        Assert.Equal(2, problems.Count);
     }
 
     private static ProblemsViewModel CreateViewModel(FakeProblemService problems) => new(
