@@ -377,6 +377,7 @@ public sealed class ProblemsViewModel : ObservableObject
             return;
         }
 
+        var createsNewProblem = !_selectedProblemId.HasValue;
         var result = await _problemService.SaveAsync(_selectedProblemId, new ProblemDraft
         {
             Title = Title,
@@ -407,6 +408,8 @@ public sealed class ProblemsViewModel : ObservableObject
         {
             await RefreshAsync(result.ProblemId);
             ProblemChanged?.Invoke();
+            if (createsNewProblem)
+                BeginNewProblem();
         }
     }
 
@@ -459,7 +462,7 @@ public sealed class ProblemsViewModel : ObservableObject
     {
         if (!HasUnsavedChanges)
             return true;
-        await SaveAsync();
+        await SaveAsync(refreshAfterSave);
         return !HasUnsavedChanges;
     }
 
