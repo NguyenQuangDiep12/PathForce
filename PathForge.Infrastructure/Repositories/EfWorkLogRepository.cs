@@ -15,38 +15,68 @@ public sealed class EfWorkLogRepository : IWorkLogRepository
     public async Task<IReadOnlyList<WorkLog>> GetHistoryAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
+        var logs = await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
             .OrderByDescending(log => log.StartedAt).ToListAsync(cancellationToken);
+        await LoadScopeTitlesAsync(context, logs, cancellationToken);
+        return logs;
     }
 
     public async Task<IReadOnlyList<WorkLog>> GetByProblemAsync(int problemId, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
+        var logs = await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
             .Where(log => log.ProblemId == problemId).OrderByDescending(log => log.StartedAt).ToListAsync(cancellationToken);
+        await LoadScopeTitlesAsync(context, logs, cancellationToken);
+        return logs;
     }
 
     public async Task<WorkLog?> GetOpenAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
+        var log = await context.WorkLogs.AsNoTracking().Include(item => item.Problem)
             .Where(log => log.Status == WorkLogStatus.Running || log.Status == WorkLogStatus.Paused || log.Status == WorkLogStatus.AwaitingReport)
             .OrderByDescending(log => log.Status == WorkLogStatus.Running)
             .ThenByDescending(log => log.Status == WorkLogStatus.Paused)
             .ThenByDescending(log => log.StartedAt).FirstOrDefaultAsync(cancellationToken);
+        if (log is not null)
+            await LoadScopeTitlesAsync(context, new[] { log }, cancellationToken);
+        return log;
     }
 
     public async Task<WorkLog?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
-            .FirstOrDefaultAsync(log => log.Id == id, cancellationToken);
+        var log = await context.WorkLogs.AsNoTracking().Include(item => item.Problem)
+            .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (log is not null)
+            await LoadScopeTitlesAsync(context, new[] { log }, cancellationToken);
+        return log;
     }
 
     public async Task<bool> HasRunningAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         return await context.WorkLogs.AnyAsync(log => log.Status == WorkLogStatus.Running, cancellationToken);
+    }
+
+    public async Task<bool> ScopeItemBelongsToProblemAsync(int scopeItemId, int problemId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.ScopeItems.AsNoTracking()
+            .AnyAsync(item => item.Id == scopeItemId && item.ProblemId == problemId, cancellationToken);
+    }
+
+    private static async Task LoadScopeTitlesAsync(
+        PathForgeDbContext context, IReadOnlyCollection<WorkLog> logs, CancellationToken cancellationToken)
+    {
+        var ids = logs.Where(log => log.ScopeItemId.HasValue).Select(log => log.ScopeItemId.GetValueOrDefault()).Distinct().ToArray();
+        if (ids.Length == 0)
+            return;
+        var titles = await context.ScopeItems.AsNoTracking().Where(item => ids.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.Title, cancellationToken);
+        foreach (var log in logs)
+            if (log.ScopeItemId.HasValue && titles.TryGetValue(log.ScopeItemId.Value, out var title))
+                log.ScopeItemTitle = title;
     }
 
     public async Task<int> AddAsync(WorkLog workLog, CancellationToken cancellationToken = default)

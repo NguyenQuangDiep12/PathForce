@@ -21,7 +21,8 @@
                         <Border Background="#EEF3EF" CornerRadius="14" Padding="12,5" HorizontalAlignment="Left" Margin="0,18,0,0">
                             <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource AccentBrush}" FontWeight="SemiBold" />
                         </Border>
-                        <TextBlock Text="{Binding CurrentProblem.NextAction}" Margin="0,22,0,0" FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource InkBrush}" />
+                        <TextBlock Text="Bước tiếp theo" Margin="0,22,0,5" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        <TextBlock Text="{Binding NextActionText}" FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource InkBrush}" />
                         <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="13" Margin="0,18,0,0"
                                 Visibility="{Binding HasOpenSession, Converter={StaticResource BooleanToVisibilityConverter}}">
                             <DockPanel>
@@ -42,7 +43,10 @@
                                 <Button Content="Xem báo cáo" Command="{Binding OpenRecentReportCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="12,0,0,0" />
                             </DockPanel>
                         </Border>
-                        <Button Content="Mở bài toán" Command="{Binding OpenProblemCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Left" Margin="0,24,0,0" />
+                        <WrapPanel Margin="0,24,0,0">
+                            <Button Content="Tiếp tục thực hiện" Command="{Binding ContinueWorkCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,8,8" />
+                            <Button Content="Mở bài toán" Command="{Binding OpenProblemCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,8" />
+                        </WrapPanel>
                     </StackPanel>
                     <StackPanel Visibility="{Binding HasProblem, Converter={StaticResource InverseVisibilityConverter}}">
                         <TextBlock Text="Chưa có bài toán nào" FontSize="22" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />

@@ -18,6 +18,7 @@ public sealed class DashboardViewModel : ObservableObject
         _workLogService = workLogService;
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         CreateProblemCommand = new RelayCommand(() => CreateProblemRequested?.Invoke());
+        ContinueWorkCommand = new RelayCommand(() => ContinueWorkRequested?.Invoke());
         OpenProblemCommand = new RelayCommand(() =>
         {
             if (CurrentProblem is not null)
@@ -34,11 +35,13 @@ public sealed class DashboardViewModel : ObservableObject
     public event Action? CreateProblemRequested;
     public event Action<int>? OpenProblemRequested;
     public event Action? OpenSessionRequested;
+    public event Action? ContinueWorkRequested;
     public event Action<int>? OpenWorkLogRequested;
     public AsyncRelayCommand RefreshCommand { get; }
     public RelayCommand CreateProblemCommand { get; }
     public RelayCommand OpenProblemCommand { get; }
     public RelayCommand OpenSessionCommand { get; }
+    public RelayCommand ContinueWorkCommand { get; }
     public RelayCommand OpenRecentReportCommand { get; }
 
     public ProblemDetails? CurrentProblem
@@ -50,6 +53,7 @@ public sealed class DashboardViewModel : ObservableObject
                 return;
             OnPropertyChanged(nameof(HasProblem));
             OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(NextActionText));
             OpenProblemCommand.NotifyCanExecuteChanged();
         }
     }
@@ -77,11 +81,16 @@ public sealed class DashboardViewModel : ObservableObject
                 return;
             OnPropertyChanged(nameof(HasRecentReport));
             OnPropertyChanged(nameof(RecentReportSummary));
+            OnPropertyChanged(nameof(NextActionText));
             OpenRecentReportCommand.NotifyCanExecuteChanged();
         }
     }
     public bool HasRecentReport => RecentReport is not null;
     public string RecentReportSummary => RecentReport?.Summary ?? string.Empty;
+    public string NextActionText =>
+        !string.IsNullOrWhiteSpace(RecentReport?.NextStep) ? RecentReport.NextStep! :
+        !string.IsNullOrWhiteSpace(CurrentProblem?.NextAction) ? CurrentProblem.NextAction! :
+        "Chưa ghi bước tiếp theo. Hãy chọn một việc cụ thể để tiếp tục.";
     public string OpenSessionText => OpenSession?.Status switch
     {
         WorkLogStatus.Running => "Có phiên đang chạy",

@@ -16,7 +16,8 @@ public sealed class EfHistoryRepository : IHistoryRepository
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var problems = await context.Problems.AsNoTracking().ToListAsync(cancellationToken);
         return problems.Where(problem => Matches(keyword, problem.Title, problem.Goal, problem.Description,
-            problem.SuccessCriteria, problem.NextAction)).ToList();
+            problem.AnalysisWhat, problem.AnalysisWhy, problem.AnalysisWho, problem.AnalysisWhere,
+            problem.AnalysisWhen, problem.AnalysisHow, problem.SuccessCriteria, problem.NextAction)).ToList();
     }
 
     public async Task<IReadOnlyList<ScopeItem>> SearchScopeItemsAsync(string keyword, CancellationToken cancellationToken = default)
@@ -30,6 +31,16 @@ public sealed class EfHistoryRepository : IHistoryRepository
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var workLogs = await context.WorkLogs.AsNoTracking().Include(log => log.Problem).ToListAsync(cancellationToken);
+        var scopeIds = workLogs.Where(log => log.ScopeItemId.HasValue)
+            .Select(log => log.ScopeItemId.GetValueOrDefault()).Distinct().ToArray();
+        if (scopeIds.Length > 0)
+        {
+            var titles = await context.ScopeItems.AsNoTracking().Where(item => scopeIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.Title, cancellationToken);
+            foreach (var log in workLogs)
+                if (log.ScopeItemId.HasValue && titles.TryGetValue(log.ScopeItemId.Value, out var title))
+                    log.ScopeItemTitle = title;
+        }
         return workLogs.Where(log => Matches(keyword, log.TaskTitle, log.WhatWasDone, log.Result,
             log.Learned, log.Blocker, log.NextStep)).ToList();
     }

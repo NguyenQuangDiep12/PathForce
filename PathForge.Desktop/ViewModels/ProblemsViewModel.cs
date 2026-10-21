@@ -24,11 +24,22 @@ public sealed class ProblemsViewModel : ObservableObject
     private string _title = string.Empty;
     private string _goal = string.Empty;
     private string _description = string.Empty;
+    private string _analysisWhat = string.Empty;
+    private string _analysisWhy = string.Empty;
+    private string _analysisWho = string.Empty;
+    private string _analysisWhere = string.Empty;
+    private string _analysisWhen = string.Empty;
+    private string _analysisHow = string.Empty;
     private string _successCriteria = string.Empty;
     private string _nextAction = string.Empty;
     private bool _requiresEvidence;
     private string _validationMessage = string.Empty;
     private bool _isNew = true;
+    private bool _isExplicitlyCreatingNewProblem;
+    private bool _isRefreshingList;
+    private int _selectionGeneration;
+    private ProblemFormState _savedFormState = new(string.Empty, string.Empty, string.Empty, string.Empty,
+        string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, false);
     private ScopeItemDetails? _selectedScopeItem;
     private int? _selectedScopeItemId;
     private string _scopeTitle = string.Empty;
@@ -57,7 +68,7 @@ public sealed class ProblemsViewModel : ObservableObject
         _evidenceOpener = evidenceOpener;
         SearchCommand = new AsyncRelayCommand(() => RefreshAsync());
         SaveCommand = new AsyncRelayCommand(SaveAsync);
-        NewProblemCommand = new RelayCommand(BeginNewProblem);
+        NewProblemCommand = new RelayCommand(() => _ = RequestNewProblemAsync());
         DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => _selectedProblemId.HasValue);
         MoveToInProgressCommand = new AsyncRelayCommand(() => ChangeStatusAsync(ProblemStatus.InProgress), CanMoveToInProgress);
         MoveToBlockedCommand = new AsyncRelayCommand(() => ChangeStatusAsync(ProblemStatus.Blocked), CanMoveToBlocked);
@@ -113,12 +124,18 @@ public sealed class ProblemsViewModel : ObservableObject
                 OnPropertyChanged(nameof(EmptyListMessage));
         }
     }
-    public string Title { get => _title; set => SetProperty(ref _title, value); }
-    public string Goal { get => _goal; set => SetProperty(ref _goal, value); }
-    public string Description { get => _description; set => SetProperty(ref _description, value); }
-    public string SuccessCriteria { get => _successCriteria; set => SetProperty(ref _successCriteria, value); }
-    public string NextAction { get => _nextAction; set => SetProperty(ref _nextAction, value); }
-    public bool RequiresEvidence { get => _requiresEvidence; set => SetProperty(ref _requiresEvidence, value); }
+    public string Title { get => _title; set => SetFormProperty(ref _title, value); }
+    public string Goal { get => _goal; set => SetFormProperty(ref _goal, value); }
+    public string Description { get => _description; set => SetFormProperty(ref _description, value); }
+    public string AnalysisWhat { get => _analysisWhat; set => SetFormProperty(ref _analysisWhat, value); }
+    public string AnalysisWhy { get => _analysisWhy; set => SetFormProperty(ref _analysisWhy, value); }
+    public string AnalysisWho { get => _analysisWho; set => SetFormProperty(ref _analysisWho, value); }
+    public string AnalysisWhere { get => _analysisWhere; set => SetFormProperty(ref _analysisWhere, value); }
+    public string AnalysisWhen { get => _analysisWhen; set => SetFormProperty(ref _analysisWhen, value); }
+    public string AnalysisHow { get => _analysisHow; set => SetFormProperty(ref _analysisHow, value); }
+    public string SuccessCriteria { get => _successCriteria; set => SetFormProperty(ref _successCriteria, value); }
+    public string NextAction { get => _nextAction; set => SetFormProperty(ref _nextAction, value); }
+    public bool RequiresEvidence { get => _requiresEvidence; set => SetFormProperty(ref _requiresEvidence, value); }
     public string ValidationMessage { get => _validationMessage; private set => SetProperty(ref _validationMessage, value); }
     public string ScopeTitle { get => _scopeTitle; set => SetProperty(ref _scopeTitle, value); }
     public string ScopeReason { get => _scopeReason; set => SetProperty(ref _scopeReason, value); }
@@ -128,6 +145,8 @@ public sealed class ProblemsViewModel : ObservableObject
     public bool IsNew { get => _isNew; private set => SetProperty(ref _isNew, value); }
     public bool IsExisting => !IsNew && _selectedProblemId.HasValue;
     public bool HasProblems => Problems.Count > 0;
+    public bool HasUnsavedChanges => CaptureFormState() != _savedFormState;
+    public bool HasSelectedEvidence => SelectedEvidence is not null;
     public string EmptyListMessage => string.IsNullOrWhiteSpace(Keyword)
         ? "Chưa có bài toán nào."
         : "Không tìm thấy bài toán phù hợp.";
@@ -153,8 +172,16 @@ public sealed class ProblemsViewModel : ObservableObject
         get => _selectedProblem;
         set
         {
-            if (SetProperty(ref _selectedProblem, value) && value is not null)
-                _ = LoadProblemAsync(value.Id);
+            var previous = _selectedProblem;
+            if (!SetProperty(ref _selectedProblem, value) || _isRefreshingList)
+                return;
+            if (value is null)
+            {
+                ++_selectionGeneration;
+                return;
+            }
+            if (previous?.Id != value.Id)
+                _ = HandleProblemSelectionAsync(previous, value, ++_selectionGeneration);
         }
     }
 
@@ -183,6 +210,7 @@ public sealed class ProblemsViewModel : ObservableObject
         {
             if (!SetProperty(ref _selectedEvidence, value))
                 return;
+            OnPropertyChanged(nameof(HasSelectedEvidence));
             OpenEvidenceCommand.NotifyCanExecuteChanged();
             DeleteEvidenceCommand.NotifyCanExecuteChanged();
         }
@@ -200,7 +228,14 @@ public sealed class ProblemsViewModel : ObservableObject
 
     public async Task RefreshAsync(int? selectId = null)
     {
+        var generation = _selectionGeneration;
+        var previousSelectionId = SelectedProblem?.Id;
         var items = await _problemService.SearchAsync(Keyword);
+        if (generation != _selectionGeneration)
+            return;
+
+        ProblemListItem? toLoad = null;
+        _isRefreshingList = true;
         Problems.Clear();
         foreach (var item in items)
             Problems.Add(item);
@@ -211,32 +246,59 @@ public sealed class ProblemsViewModel : ObservableObject
         {
             var selected = Problems.FirstOrDefault(problem => problem.Id == selectId.Value);
             if (selected is not null)
+            {
                 SelectedProblem = selected;
+                toLoad = selected;
+            }
         }
         else if (_selectedProblemId.HasValue)
         {
             var selected = Problems.FirstOrDefault(problem => problem.Id == _selectedProblemId.Value);
             if (selected is not null)
+            {
                 SelectedProblem = selected;
+                toLoad = selected;
+            }
         }
-        else if (Problems.Count > 0 && IsNew)
+        else if (Problems.Count > 0 && IsNew && !_isExplicitlyCreatingNewProblem)
+        {
             SelectedProblem = Problems[0];
+            toLoad = Problems[0];
+        }
+        _isRefreshingList = false;
+        if (toLoad is not null && (previousSelectionId != toLoad.Id || !HasUnsavedChanges))
+            await LoadProblemAsync(toLoad.Id, generation);
     }
 
     public void FocusNewProblem() => BeginNewProblem();
+
+    private async Task RequestNewProblemAsync()
+    {
+        if (HasUnsavedChanges)
+        {
+            var choice = _dialogs.AskToSaveChanges("Thông tin bài toán");
+            if (choice == UnsavedChangesChoice.Cancel)
+                return;
+            if (choice == UnsavedChangesChoice.Discard)
+                DiscardPendingChanges();
+            else if (!await SavePendingChangesAsync())
+                return;
+        }
+        BeginNewProblem();
+    }
 
     public async Task OpenProblemAsync(int problemId, int? scopeItemId = null)
     {
         Keyword = string.Empty;
         await RefreshAsync(problemId);
-        SelectedProblem = Problems.FirstOrDefault(problem => problem.Id == problemId);
-        await LoadProblemAsync(problemId);
         if (scopeItemId.HasValue)
             SelectedScopeItem = ScopeItems.FirstOrDefault(item => item.Id == scopeItemId.Value);
     }
 
     private void BeginNewProblem()
     {
+        ++_selectionGeneration;
+        _isExplicitlyCreatingNewProblem = true;
         SelectedProblem = null;
         _selectedProblemId = null;
         IsNew = true;
@@ -244,6 +306,12 @@ public sealed class ProblemsViewModel : ObservableObject
         Title = string.Empty;
         Goal = string.Empty;
         Description = string.Empty;
+        AnalysisWhat = string.Empty;
+        AnalysisWhy = string.Empty;
+        AnalysisWho = string.Empty;
+        AnalysisWhere = string.Empty;
+        AnalysisWhen = string.Empty;
+        AnalysisHow = string.Empty;
         SuccessCriteria = string.Empty;
         NextAction = string.Empty;
         RequiresEvidence = false;
@@ -255,32 +323,47 @@ public sealed class ProblemsViewModel : ObservableObject
         SelectedEvidence = null;
         EvidenceDescription = string.Empty;
         EvidenceMessage = string.Empty;
+        _savedFormState = CaptureFormState();
         ValidationMessage = string.Empty;
         NotifyStatusChanged();
     }
 
-    private async Task LoadProblemAsync(int id)
+    private async Task LoadProblemAsync(int id, int generation)
     {
         var problem = await _problemService.GetAsync(id);
-        if (problem is null)
+        if (problem is null || generation != _selectionGeneration || SelectedProblem?.Id != id)
             return;
         _selectedProblemId = problem.Id;
+        _isExplicitlyCreatingNewProblem = false;
         IsNew = false;
         _status = problem.Status;
         Title = problem.Title;
         Goal = problem.Goal;
         Description = problem.Description ?? string.Empty;
+        AnalysisWhat = problem.AnalysisWhat ?? string.Empty;
+        AnalysisWhy = problem.AnalysisWhy ?? string.Empty;
+        AnalysisWho = problem.AnalysisWho ?? string.Empty;
+        AnalysisWhere = problem.AnalysisWhere ?? string.Empty;
+        AnalysisWhen = problem.AnalysisWhen ?? string.Empty;
+        AnalysisHow = problem.AnalysisHow ?? string.Empty;
         SuccessCriteria = problem.SuccessCriteria ?? string.Empty;
         NextAction = problem.NextAction ?? string.Empty;
         RequiresEvidence = problem.RequiresEvidence;
+        _savedFormState = CaptureFormState();
         ValidationMessage = string.Empty;
         NotifyStatusChanged();
-        await LoadScopeItemsAsync(problem.Id);
-        await LoadEvidenceAsync(problem.Id);
-        await LoadWorkLogsAsync(problem.Id);
+        await LoadScopeItemsAsync(problem.Id, generation);
+        if (generation != _selectionGeneration)
+            return;
+        await LoadEvidenceAsync(problem.Id, generation);
+        if (generation != _selectionGeneration)
+            return;
+        await LoadWorkLogsAsync(problem.Id, generation);
     }
 
-    private async Task SaveAsync()
+    private Task SaveAsync() => SaveAsync(refreshAfterSave: true);
+
+    private async Task SaveAsync(bool refreshAfterSave)
     {
         ValidationMessage = string.Empty;
         if (string.IsNullOrWhiteSpace(Title))
@@ -299,6 +382,12 @@ public sealed class ProblemsViewModel : ObservableObject
             Title = Title,
             Goal = Goal,
             Description = Description,
+            AnalysisWhat = AnalysisWhat,
+            AnalysisWhy = AnalysisWhy,
+            AnalysisWho = AnalysisWho,
+            AnalysisWhere = AnalysisWhere,
+            AnalysisWhen = AnalysisWhen,
+            AnalysisHow = AnalysisHow,
             SuccessCriteria = SuccessCriteria,
             NextAction = NextAction,
             RequiresEvidence = RequiresEvidence
@@ -312,9 +401,13 @@ public sealed class ProblemsViewModel : ObservableObject
 
         IsNew = false;
         _selectedProblemId = result.ProblemId;
+        _savedFormState = CaptureFormState();
         Keyword = string.Empty;
-        await RefreshAsync(result.ProblemId);
-        ProblemChanged?.Invoke();
+        if (refreshAfterSave)
+        {
+            await RefreshAsync(result.ProblemId);
+            ProblemChanged?.Invoke();
+        }
     }
 
     private async Task ChangeStatusAsync(ProblemStatus target)
@@ -331,7 +424,8 @@ public sealed class ProblemsViewModel : ObservableObject
                 return;
         }
 
-        var result = await _problemService.ChangeStatusAsync(_selectedProblemId.Value, target);
+        var result = await _problemService.ChangeStatusAsync(
+            _selectedProblemId.Value, target, userConfirmedResolution: target == ProblemStatus.Resolved);
         if (!result.Succeeded)
         {
             _dialogs.ShowMessage("Chưa cập nhật được trạng thái", result.Error ?? "Vui lòng thử lại.", true);
@@ -356,16 +450,99 @@ public sealed class ProblemsViewModel : ObservableObject
         }
         BeginNewProblem();
         await RefreshAsync();
+        if (!string.IsNullOrWhiteSpace(result.Warning))
+            _dialogs.ShowMessage("Bài toán đã xóa, còn tệp cần dọn", result.Warning, true);
         ProblemChanged?.Invoke();
     }
+
+    public async Task<bool> SavePendingChangesAsync(bool refreshAfterSave = true)
+    {
+        if (!HasUnsavedChanges)
+            return true;
+        await SaveAsync();
+        return !HasUnsavedChanges;
+    }
+
+    public void DiscardPendingChanges()
+    {
+        ApplyFormState(_savedFormState);
+        ValidationMessage = string.Empty;
+    }
+
+    private async Task HandleProblemSelectionAsync(ProblemListItem? previous, ProblemListItem next, int generation)
+    {
+        if (HasUnsavedChanges)
+        {
+            var choice = _dialogs.AskToSaveChanges("Thông tin bài toán");
+            if (choice == UnsavedChangesChoice.Cancel)
+            {
+                RestoreProblemSelection(previous, generation);
+                return;
+            }
+            if (choice == UnsavedChangesChoice.Discard)
+                DiscardPendingChanges();
+            else if (!await SavePendingChangesAsync())
+            {
+                RestoreProblemSelection(previous, generation);
+                return;
+            }
+        }
+
+        if (generation == _selectionGeneration)
+            await LoadProblemAsync(next.Id, generation);
+    }
+
+    private void RestoreProblemSelection(ProblemListItem? previous, int generation)
+    {
+        if (generation != _selectionGeneration)
+            return;
+        _selectedProblem = previous;
+        OnPropertyChanged(nameof(SelectedProblem));
+    }
+
+    private bool SetFormProperty<T>(ref T field, T value)
+    {
+        if (!SetProperty(ref field, value))
+            return false;
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        return true;
+    }
+
+    private ProblemFormState CaptureFormState() => new(
+        Title, Goal, Description, AnalysisWhat, AnalysisWhy, AnalysisWho, AnalysisWhere,
+        AnalysisWhen, AnalysisHow, SuccessCriteria, NextAction, RequiresEvidence);
+
+    private void ApplyFormState(ProblemFormState state)
+    {
+        Title = state.Title;
+        Goal = state.Goal;
+        Description = state.Description;
+        AnalysisWhat = state.AnalysisWhat;
+        AnalysisWhy = state.AnalysisWhy;
+        AnalysisWho = state.AnalysisWho;
+        AnalysisWhere = state.AnalysisWhere;
+        AnalysisWhen = state.AnalysisWhen;
+        AnalysisHow = state.AnalysisHow;
+        SuccessCriteria = state.SuccessCriteria;
+        NextAction = state.NextAction;
+        RequiresEvidence = state.RequiresEvidence;
+    }
+
+    private sealed record ProblemFormState(
+        string Title, string Goal, string Description, string AnalysisWhat, string AnalysisWhy,
+        string AnalysisWho, string AnalysisWhere, string AnalysisWhen, string AnalysisHow,
+        string SuccessCriteria, string NextAction, bool RequiresEvidence);
 
     private bool CanMoveToInProgress() => _selectedProblemId.HasValue && _status != ProblemStatus.InProgress;
     private bool CanMoveToBlocked() => _selectedProblemId.HasValue && (_status == ProblemStatus.NotStarted || _status == ProblemStatus.InProgress);
     private bool CanResolve() => _selectedProblemId.HasValue && (_status == ProblemStatus.InProgress || _status == ProblemStatus.Blocked);
 
-    private async Task LoadScopeItemsAsync(int problemId)
+    private async Task LoadScopeItemsAsync(int problemId, int? loadGeneration = null)
     {
+        var generation = loadGeneration ?? _selectionGeneration;
         var items = await _scopeItemService.GetByProblemAsync(problemId);
+        if (generation != _selectionGeneration || _selectedProblemId != problemId)
+            return;
         ScopeItems.Clear();
         foreach (var item in items)
             ScopeItems.Add(item);
@@ -377,9 +554,12 @@ public sealed class ProblemsViewModel : ObservableObject
         NotifyScopeCommands();
     }
 
-    private async Task LoadEvidenceAsync(int problemId)
+    private async Task LoadEvidenceAsync(int problemId, int? loadGeneration = null)
     {
+        var generation = loadGeneration ?? _selectionGeneration;
         var items = await _evidenceService.GetByProblemAsync(problemId);
+        if (generation != _selectionGeneration || _selectedProblemId != problemId)
+            return;
         EvidenceItems.Clear();
         foreach (var item in items)
             EvidenceItems.Add(item);
@@ -387,9 +567,12 @@ public sealed class ProblemsViewModel : ObservableObject
         EvidenceMessage = string.Empty;
     }
 
-    private async Task LoadWorkLogsAsync(int problemId)
+    private async Task LoadWorkLogsAsync(int problemId, int? loadGeneration = null)
     {
+        var generation = loadGeneration ?? _selectionGeneration;
         var items = await _workLogService.GetByProblemAsync(problemId);
+        if (generation != _selectionGeneration || _selectedProblemId != problemId)
+            return;
         RecentWorkLogs.Clear();
         foreach (var item in items.Take(5))
             RecentWorkLogs.Add(item);
@@ -440,6 +623,8 @@ public sealed class ProblemsViewModel : ObservableObject
         }
         if (_selectedProblemId.HasValue)
             await LoadEvidenceAsync(_selectedProblemId.Value);
+        if (!string.IsNullOrWhiteSpace(result.Error))
+            _dialogs.ShowMessage("Ảnh đã xóa, còn tệp cần dọn", result.Error, true);
     }
 
     private void BeginNewScopeItem()

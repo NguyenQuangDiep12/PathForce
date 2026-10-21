@@ -57,6 +57,12 @@ public sealed class ProblemService : IProblemService
         problem.Title = draft.Title.Trim();
         problem.Goal = draft.Goal.Trim();
         problem.Description = Normalize(draft.Description);
+        problem.AnalysisWhat = Normalize(draft.AnalysisWhat);
+        problem.AnalysisWhy = Normalize(draft.AnalysisWhy);
+        problem.AnalysisWho = Normalize(draft.AnalysisWho);
+        problem.AnalysisWhere = Normalize(draft.AnalysisWhere);
+        problem.AnalysisWhen = Normalize(draft.AnalysisWhen);
+        problem.AnalysisHow = Normalize(draft.AnalysisHow);
         problem.SuccessCriteria = Normalize(draft.SuccessCriteria);
         problem.NextAction = Normalize(draft.NextAction);
         problem.RequiresEvidence = draft.RequiresEvidence;
@@ -69,13 +75,16 @@ public sealed class ProblemService : IProblemService
         return ProblemOperationResult.Success(problem.Id);
     }
 
-    public async Task<ProblemOperationResult> ChangeStatusAsync(int id, ProblemStatus status, CancellationToken cancellationToken = default)
+    public async Task<ProblemOperationResult> ChangeStatusAsync(
+        int id, ProblemStatus status, bool userConfirmedResolution = false, CancellationToken cancellationToken = default)
     {
         var problem = await _repository.GetByIdAsync(id, cancellationToken);
         if (problem is null)
             return ProblemOperationResult.Failure("Không tìm thấy bài toán.");
         if (!ProblemStatusRules.CanTransition(problem.Status, status))
             return ProblemOperationResult.Failure("Trạng thái mới không hợp lệ với trạng thái hiện tại.");
+        if (status == ProblemStatus.Resolved && !userConfirmedResolution)
+            return ProblemOperationResult.Failure("Hãy xác nhận rõ ràng rằng mục tiêu bài toán đã đạt trước khi hoàn thành.");
         if (status == ProblemStatus.Resolved && problem.RequiresEvidence &&
             await _repository.CountEvidenceAsync(id, cancellationToken) == 0)
             return ProblemOperationResult.Failure("Bài toán này yêu cầu minh chứng. Hãy thêm ít nhất một ảnh trước khi hoàn thành.");
@@ -93,8 +102,12 @@ public sealed class ProblemService : IProblemService
             return ProblemOperationResult.Failure("Không tìm thấy bài toán cần xóa.");
         try
         {
-            await _repository.DeleteAsync(id, cancellationToken);
-            return ProblemOperationResult.Success(id);
+            var pendingCleanup = await _repository.DeleteAsync(id, cancellationToken);
+            var warning = pendingCleanup.Count == 0
+                ? null
+                : "Bài toán và dữ liệu trong SQLite đã được xóa. Không xóa được một số tệp ảnh tạm: " +
+                  string.Join(", ", pendingCleanup) + ". Hãy xóa các tệp này trong thư mục Evidence của PathForge.";
+            return ProblemOperationResult.Success(id, warning);
         }
         catch (Exception)
         {
@@ -108,6 +121,8 @@ public sealed class ProblemService : IProblemService
         new(problem.Id, problem.Title, problem.Goal, problem.Status, problem.UpdatedAt);
 
     private static ProblemDetails ToDetails(Problem problem) =>
-        new(problem.Id, problem.Title, problem.Goal, problem.Description, problem.SuccessCriteria,
+        new(problem.Id, problem.Title, problem.Goal, problem.Description,
+            problem.AnalysisWhat, problem.AnalysisWhy, problem.AnalysisWho,
+            problem.AnalysisWhere, problem.AnalysisWhen, problem.AnalysisHow, problem.SuccessCriteria,
             problem.NextAction, problem.Status, problem.RequiresEvidence, problem.CreatedAt, problem.UpdatedAt);
 }

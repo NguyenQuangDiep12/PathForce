@@ -9,6 +9,7 @@ public interface IWorkLogRepository
     Task<WorkLog?> GetOpenAsync(CancellationToken cancellationToken = default);
     Task<WorkLog?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<bool> HasRunningAsync(CancellationToken cancellationToken = default);
+    Task<bool> ScopeItemBelongsToProblemAsync(int scopeItemId, int problemId, CancellationToken cancellationToken = default);
     Task<int> AddAsync(WorkLog workLog, CancellationToken cancellationToken = default);
     Task UpdateAsync(WorkLog workLog, CancellationToken cancellationToken = default);
 }

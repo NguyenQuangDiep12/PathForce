@@ -38,6 +38,7 @@ public sealed class ScopeItemService : IScopeItemService
 
         item.Title = draft.Title.Trim();
         item.Reason = string.IsNullOrWhiteSpace(draft.Reason) ? null : draft.Reason.Trim();
+        item.Status = draft.Status;
         item.UpdatedAt = DateTime.UtcNow;
         var savedId = id.HasValue
             ? await UpdateAndReturnIdAsync(item, cancellationToken)

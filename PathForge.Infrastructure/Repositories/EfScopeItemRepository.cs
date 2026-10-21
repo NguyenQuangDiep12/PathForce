@@ -51,6 +51,13 @@ public sealed class EfScopeItemRepository : IScopeItemRepository
         var item = await context.ScopeItems.FirstOrDefaultAsync(scopeItem => scopeItem.Id == id, cancellationToken);
         if (item is null)
             return;
+        var linkedWorkLogs = await context.WorkLogs
+            .Where(log => log.ScopeItemId == id).ToListAsync(cancellationToken);
+        foreach (var workLog in linkedWorkLogs)
+        {
+            workLog.ScopeItemId = null;
+            workLog.UpdatedAt = DateTime.UtcNow;
+        }
         context.ScopeItems.Remove(item);
         await context.SaveChangesAsync(cancellationToken);
     }

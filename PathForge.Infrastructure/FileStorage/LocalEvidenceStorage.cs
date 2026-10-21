@@ -55,6 +55,32 @@ public sealed class LocalEvidenceStorage : IFileStorage
         return fullPath;
     }
 
+    public Task<string?> StageDeleteAsync(string relativePath, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var sourcePath = GetAbsolutePath(relativePath);
+        if (!File.Exists(sourcePath))
+            return Task.FromResult<string?>(null);
+
+        var stagedName = ".pending-delete-" + Guid.NewGuid().ToString("N") + Path.GetExtension(relativePath);
+        var stagedPath = GetAbsolutePath(stagedName);
+        File.Move(sourcePath, stagedPath);
+        return Task.FromResult<string?>(stagedName);
+    }
+
+    public Task RestoreStagedAsync(string stagedRelativePath, string originalRelativePath, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var stagedPath = GetAbsolutePath(stagedRelativePath);
+        if (!File.Exists(stagedPath))
+            return Task.CompletedTask;
+
+        var originalPath = GetAbsolutePath(originalRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(originalPath)!);
+        File.Move(stagedPath, originalPath);
+        return Task.CompletedTask;
+    }
+
     public Task DeleteAsync(string relativePath, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

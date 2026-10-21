@@ -39,8 +39,9 @@ public sealed class HistoryService : IHistoryService
             item.ProblemId, item.Id, null, null, null)));
         results.AddRange(workLogs.Select(log => new HistorySearchResult(
             HistoryResultKind.WorkLog, log.TaskTitle,
-            FirstNonEmpty(log.WhatWasDone, log.Result, log.Learned, log.Blocker, log.NextStep, log.Problem?.Title ?? "Phiên làm việc"),
-            log.StartedAt, log.ProblemId, null, log.Id, null, null)));
+            FirstNonEmpty(log.ScopeItemTitle is null ? null : "Mục phạm vi: " + log.ScopeItemTitle,
+                log.WhatWasDone, log.Result, log.Learned, log.Blocker, log.NextStep, log.Problem?.Title ?? "Phiên làm việc"),
+            log.StartedAt, log.ProblemId, log.ScopeItemId, log.Id, null, null)));
         results.AddRange(evidence.Select(item => new HistorySearchResult(
             HistoryResultKind.Evidence, item.DisplayName,
             item.Description ?? item.Problem?.Title ?? "Ảnh minh chứng", item.CreatedAt,

@@ -4,12 +4,13 @@
         xmlns:views="clr-namespace:PathForge.Desktop.Views"
         xmlns:vm="clr-namespace:PathForge.Desktop.ViewModels"
         Title="PathForge" Height="760" Width="1240" MinHeight="620" MinWidth="980"
-        WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}">
+        WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}" Closing="Window_Closing">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><views:DashboardView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:ProblemsViewModel}"><views:ProblemsView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:WorkSessionViewModel}"><views:WorkSessionView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:HistoryViewModel}"><views:HistoryView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:KnowledgeDocumentsViewModel}"><views:KnowledgeDocumentsView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:PlaceholderViewModel}">
             <StackPanel Margin="52,44" MaxWidth="720">
                 <TextBlock Text="{Binding Title}" FontSize="30" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
@@ -50,6 +51,7 @@
                     <Button Content="Bài toán" Command="{Binding ShowProblemsCommand}" Style="{StaticResource NavigationButtonStyle}" />
                     <Button Content="Thực hiện" Command="{Binding ShowPracticeCommand}" Style="{StaticResource NavigationButtonStyle}" />
                     <Button Content="Lịch sử" Command="{Binding ShowHistoryCommand}" Style="{StaticResource NavigationButtonStyle}" />
+                    <Button Content="Tài liệu kiến thức" Command="{Binding ShowKnowledgeDocumentsCommand}" Style="{StaticResource NavigationButtonStyle}" />
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Bottom" Text="Bản MVP · lưu trên máy này" Foreground="#9EAAA3" FontSize="11" Margin="10,20,0,2" />
             </DockPanel>

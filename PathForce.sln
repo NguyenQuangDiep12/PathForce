@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PathForge.Infrastructure", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PathForge.Desktop", "PathForge.Desktop\PathForge.Desktop.csproj", "{B327137C-2FC7-4A25-98A8-B6FE202F082D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PathForge.Tests", "PathForge.Tests\PathForge.Tests.csproj", "{1A764BE5-5534-42BD-A207-BF664C6A277D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{B327137C-2FC7-4A25-98A8-B6FE202F082D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B327137C-2FC7-4A25-98A8-B6FE202F082D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B327137C-2FC7-4A25-98A8-B6FE202F082D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A764BE5-5534-42BD-A207-BF664C6A277D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A764BE5-5534-42BD-A207-BF664C6A277D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A764BE5-5534-42BD-A207-BF664C6A277D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A764BE5-5534-42BD-A207-BF664C6A277D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

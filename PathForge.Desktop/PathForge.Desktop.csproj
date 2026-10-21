@@ -15,4 +15,10 @@
     <ProjectReference Include="..\PathForge.Infrastructure\PathForge.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\pathforge.db">
+      <LogicalName>PathForge.Desktop.Resources.pathforge.db</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
 </Project>

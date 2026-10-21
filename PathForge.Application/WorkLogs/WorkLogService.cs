@@ -34,7 +34,7 @@ public sealed class WorkLogService : IWorkLogService
     }
 
     public async Task<WorkLogOperationResult> StartAsync(
-        int problemId, string taskTitle, int? plannedDurationMinutes, CancellationToken cancellationToken = default)
+        int problemId, string taskTitle, int? plannedDurationMinutes, int? scopeItemId = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(taskTitle))
             return WorkLogOperationResult.Failure("Hãy mô tả một việc cụ thể để bắt đầu phiên.");
@@ -48,9 +48,12 @@ public sealed class WorkLogService : IWorkLogService
             return WorkLogOperationResult.Failure("Không tìm thấy bài toán được chọn.");
         if (problem.Status == ProblemStatus.Resolved)
             return WorkLogOperationResult.Failure("Bài toán đã hoàn thành. Hãy mở lại bài toán trước khi bắt đầu phiên mới.");
+        if (scopeItemId.HasValue && !await _repository.ScopeItemBelongsToProblemAsync(scopeItemId.Value, problemId, cancellationToken))
+            return WorkLogOperationResult.Failure("Mục phạm vi đã chọn không thuộc bài toán này.");
         if (problem.Status != ProblemStatus.InProgress)
         {
-            var statusResult = await _problemService.ChangeStatusAsync(problemId, ProblemStatus.InProgress, cancellationToken);
+            var statusResult = await _problemService.ChangeStatusAsync(
+                problemId, ProblemStatus.InProgress, cancellationToken: cancellationToken);
             if (!statusResult.Succeeded)
                 return WorkLogOperationResult.Failure(statusResult.Error ?? "Không thể chuyển bài toán sang trạng thái đang thực hiện.");
         }
@@ -59,6 +62,7 @@ public sealed class WorkLogService : IWorkLogService
         var workLog = new WorkLog
         {
             ProblemId = problemId,
+            ScopeItemId = scopeItemId,
             TaskTitle = taskTitle.Trim(),
             PlannedDurationMinutes = plannedDurationMinutes,
             StartedAt = now,
@@ -86,6 +90,19 @@ public sealed class WorkLogService : IWorkLogService
 
     public Task<WorkLogOperationResult> EndAsync(int id, CancellationToken cancellationToken = default) =>
         ChangeStatusAsync(id, null, WorkLogStatus.AwaitingReport, true, cancellationToken);
+
+    public async Task<WorkLogOperationResult> UpdateTaskTitleAsync(int id, string taskTitle, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(taskTitle))
+            return WorkLogOperationResult.Failure("Hãy mô tả nhiệm vụ chính trước khi lưu.");
+        var workLog = await _repository.GetByIdAsync(id, cancellationToken);
+        if (workLog is null || (workLog.Status != WorkLogStatus.Running && workLog.Status != WorkLogStatus.Paused))
+            return WorkLogOperationResult.Failure("Chỉ có thể điều chỉnh nhiệm vụ khi phiên đang chạy hoặc tạm dừng.");
+        workLog.TaskTitle = taskTitle.Trim();
+        workLog.UpdatedAt = DateTime.UtcNow;
+        await _repository.UpdateAsync(workLog, cancellationToken);
+        return WorkLogOperationResult.Success(id);
+    }
 
     public async Task<WorkLogOperationResult> AbandonAsync(int id, CancellationToken cancellationToken = default)
     {
@@ -159,7 +176,8 @@ public sealed class WorkLogService : IWorkLogService
     private static string? Normalize(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
 
     private static WorkLogDetails ToDetails(WorkLog workLog) => new(
-        workLog.Id, workLog.ProblemId, workLog.Problem?.Title ?? "Bài toán", workLog.TaskTitle,
+        workLog.Id, workLog.ProblemId, workLog.ScopeItemId, workLog.ScopeItemTitle,
+        workLog.Problem?.Title ?? "Bài toán", workLog.TaskTitle,
         workLog.PlannedDurationMinutes, workLog.StartedAt, workLog.EndedAt, workLog.Status,
         workLog.ActiveSeconds, workLog.LastResumedAt, workLog.WhatWasDone, workLog.Result,
         workLog.Learned, workLog.Blocker, workLog.NextStep);

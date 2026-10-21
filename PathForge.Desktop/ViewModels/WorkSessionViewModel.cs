@@ -9,7 +9,7 @@ using PathForge.Domain.Enums;
 
 namespace PathForge.Desktop.ViewModels;
 
-public sealed class WorkSessionViewModel : ObservableObject
+public sealed class WorkSessionViewModel : ObservableObject, IDisposable
 {
     private readonly IProblemService _problemService;
     private readonly IScopeItemService _scopeItemService;
@@ -23,6 +23,10 @@ public sealed class WorkSessionViewModel : ObservableObject
     private ScopeItemDetails? _selectedScopeItem;
     private WorkLogDetails? _session;
     private string _taskTitle = string.Empty;
+    private string _quickScopeTitle = string.Empty;
+    private string _quickScopeReason = string.Empty;
+    private ScopeItemStatus _quickScopeStatus = ScopeItemStatus.Backlog;
+    private bool _isQuickScopeFormVisible;
     private string _selectedDuration = "25 phút";
     private string _elapsedText = "00:00";
     private string _whatWasDone = string.Empty;
@@ -34,6 +38,7 @@ public sealed class WorkSessionViewModel : ObservableObject
     private string _evidenceDescription = string.Empty;
 
     public event Action? SessionChanged;
+    public event Action<int, int?>? OpenProblemRequested;
 
     public WorkSessionViewModel(
         IProblemService problemService,
@@ -59,9 +64,15 @@ public sealed class WorkSessionViewModel : ObservableObject
         EndCommand = new AsyncRelayCommand(EndAsync, () => Session?.Status == WorkLogStatus.Running || Session?.Status == WorkLogStatus.Paused);
         AbandonCommand = new AsyncRelayCommand(AbandonAsync, () => Session?.Status == WorkLogStatus.Running || Session?.Status == WorkLogStatus.Paused);
         SaveReportCommand = new AsyncRelayCommand(SaveReportAsync, () => IsReportVisible);
+        SaveTaskTitleCommand = new AsyncRelayCommand(SaveTaskTitleAsync, () => CanUpdateTask);
+        ShowQuickScopeCommand = new RelayCommand(() => IsQuickScopeFormVisible = true, () => CanRecordQuickScope);
+        SaveQuickScopeCommand = new AsyncRelayCommand(SaveQuickScopeAsync, () => CanRecordQuickScope);
+        CancelQuickScopeCommand = new RelayCommand(CancelQuickScope, () => IsQuickScopeFormVisible);
         AddEvidenceCommand = new AsyncRelayCommand(AddEvidenceAsync, () => Session is not null);
         OpenEvidenceCommand = new RelayCommand(OpenSelectedEvidence, () => SelectedEvidence is not null);
         DeleteEvidenceCommand = new AsyncRelayCommand(DeleteSelectedEvidenceAsync, () => SelectedEvidence is not null);
+        OpenProblemCommand = new RelayCommand(OpenRelatedProblem, () => Session is not null);
+        OpenScopeItemCommand = new RelayCommand(OpenRelatedScopeItem, () => Session?.ScopeItemId.HasValue == true);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => UpdateElapsedText();
         _timer.Start();
@@ -71,6 +82,13 @@ public sealed class WorkSessionViewModel : ObservableObject
     public ObservableCollection<ScopeItemDetails> ScopeItems { get; } = new();
     public ObservableCollection<EvidenceDetails> EvidenceItems { get; } = new();
     public ObservableCollection<string> Durations { get; }
+    public ObservableCollection<KeyValuePair<ScopeItemStatus, string>> QuickScopeStatuses { get; } = new()
+    {
+        new(ScopeItemStatus.InScope, "Trong phạm vi"),
+        new(ScopeItemStatus.Backlog, "Để sau"),
+        new(ScopeItemStatus.Done, "Đã xử lý"),
+        new(ScopeItemStatus.Excluded, "Loại khỏi phạm vi")
+    };
     public AsyncRelayCommand RefreshCommand { get; }
     public AsyncRelayCommand StartCommand { get; }
     public AsyncRelayCommand PauseCommand { get; }
@@ -78,9 +96,15 @@ public sealed class WorkSessionViewModel : ObservableObject
     public AsyncRelayCommand EndCommand { get; }
     public AsyncRelayCommand AbandonCommand { get; }
     public AsyncRelayCommand SaveReportCommand { get; }
+    public AsyncRelayCommand SaveTaskTitleCommand { get; }
+    public RelayCommand ShowQuickScopeCommand { get; }
+    public AsyncRelayCommand SaveQuickScopeCommand { get; }
+    public RelayCommand CancelQuickScopeCommand { get; }
     public AsyncRelayCommand AddEvidenceCommand { get; }
     public RelayCommand OpenEvidenceCommand { get; }
     public AsyncRelayCommand DeleteEvidenceCommand { get; }
+    public RelayCommand OpenProblemCommand { get; }
+    public RelayCommand OpenScopeItemCommand { get; }
 
     public ProblemListItem? SelectedProblem
     {
@@ -119,27 +143,58 @@ public sealed class WorkSessionViewModel : ObservableObject
             OnPropertyChanged(nameof(IsPaused));
             OnPropertyChanged(nameof(IsAwaitingReport));
             OnPropertyChanged(nameof(IsReportVisible));
+            OnPropertyChanged(nameof(CanUpdateTask));
+            OnPropertyChanged(nameof(CanRecordQuickScope));
+            OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(SessionStatusText));
             UpdateElapsedText();
             AddEvidenceCommand.NotifyCanExecuteChanged();
+            if (!CanRecordQuickScope && IsQuickScopeFormVisible)
+                IsQuickScopeFormVisible = false;
+            OpenProblemCommand.NotifyCanExecuteChanged();
+            OpenScopeItemCommand.NotifyCanExecuteChanged();
             NotifyCommands();
         }
     }
 
-    public string TaskTitle { get => _taskTitle; set => SetProperty(ref _taskTitle, value); }
+    public string TaskTitle { get => _taskTitle; set => SetPendingProperty(ref _taskTitle, value); }
+    public string QuickScopeTitle { get => _quickScopeTitle; set => SetPendingProperty(ref _quickScopeTitle, value); }
+    public string QuickScopeReason { get => _quickScopeReason; set => SetPendingProperty(ref _quickScopeReason, value); }
+    public ScopeItemStatus QuickScopeStatus { get => _quickScopeStatus; set => SetPendingProperty(ref _quickScopeStatus, value); }
+    public bool IsQuickScopeFormVisible
+    {
+        get => _isQuickScopeFormVisible;
+        set
+        {
+            if (SetProperty(ref _isQuickScopeFormVisible, value))
+            {
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                CancelQuickScopeCommand.NotifyCanExecuteChanged();
+            }
+        }
+    }
     public string SelectedDuration { get => _selectedDuration; set => SetProperty(ref _selectedDuration, value); }
     public string ElapsedText { get => _elapsedText; private set => SetProperty(ref _elapsedText, value); }
-    public string WhatWasDone { get => _whatWasDone; set => SetProperty(ref _whatWasDone, value); }
-    public string Result { get => _result; set => SetProperty(ref _result, value); }
-    public string Learned { get => _learned; set => SetProperty(ref _learned, value); }
-    public string Blocker { get => _blocker; set => SetProperty(ref _blocker, value); }
-    public string NextStep { get => _nextStep; set => SetProperty(ref _nextStep, value); }
-    public string EvidenceDescription { get => _evidenceDescription; set => SetProperty(ref _evidenceDescription, value); }
+    public string WhatWasDone { get => _whatWasDone; set => SetPendingProperty(ref _whatWasDone, value); }
+    public string Result { get => _result; set => SetPendingProperty(ref _result, value); }
+    public string Learned { get => _learned; set => SetPendingProperty(ref _learned, value); }
+    public string Blocker { get => _blocker; set => SetPendingProperty(ref _blocker, value); }
+    public string NextStep { get => _nextStep; set => SetPendingProperty(ref _nextStep, value); }
+    public string EvidenceDescription { get => _evidenceDescription; set => SetPendingProperty(ref _evidenceDescription, value); }
     public bool IsIdle => Session is null;
+    public bool HasSelectedEvidence => SelectedEvidence is not null;
     public bool IsRunning => Session?.Status == WorkLogStatus.Running;
     public bool IsPaused => Session?.Status == WorkLogStatus.Paused;
     public bool IsAwaitingReport => Session?.Status == WorkLogStatus.AwaitingReport;
     public bool IsReportVisible => Session?.Status == WorkLogStatus.AwaitingReport || Session?.Status == WorkLogStatus.Completed;
+    public bool CanUpdateTask => Session?.Status == WorkLogStatus.Running || Session?.Status == WorkLogStatus.Paused;
+    public bool CanRecordQuickScope => CanUpdateTask;
+    public bool HasUnsavedChanges => Session is not null &&
+        ((CanUpdateTask && !Same(TaskTitle, Session.TaskTitle)) ||
+         (IsReportVisible && ReportHasChanges()) ||
+         (IsQuickScopeFormVisible && (!string.IsNullOrWhiteSpace(QuickScopeTitle) ||
+            !string.IsNullOrWhiteSpace(QuickScopeReason) || QuickScopeStatus != ScopeItemStatus.Backlog)) ||
+         !string.IsNullOrWhiteSpace(EvidenceDescription));
     public string SessionStatusText => Session?.Status switch
     {
         WorkLogStatus.Running => "Đang thực hiện",
@@ -157,6 +212,7 @@ public sealed class WorkSessionViewModel : ObservableObject
         {
             if (!SetProperty(ref _selectedEvidence, value))
                 return;
+            OnPropertyChanged(nameof(HasSelectedEvidence));
             OpenEvidenceCommand.NotifyCanExecuteChanged();
             DeleteEvidenceCommand.NotifyCanExecuteChanged();
         }
@@ -175,6 +231,8 @@ public sealed class WorkSessionViewModel : ObservableObject
         {
             _selectedProblem = Problems.FirstOrDefault(problem => problem.Id == openSession.ProblemId);
             OnPropertyChanged(nameof(SelectedProblem));
+            await LoadScopeItemsAsync(openSession.ProblemId);
+            SelectedScopeItem = ScopeItems.FirstOrDefault(item => item.Id == openSession.ScopeItemId);
             TaskTitle = openSession.TaskTitle;
             WhatWasDone = openSession.WhatWasDone ?? string.Empty;
             Result = openSession.Result ?? string.Empty;
@@ -224,6 +282,22 @@ public sealed class WorkSessionViewModel : ObservableObject
         SelectedEvidence = null;
     }
 
+    private async Task LoadSessionDetailsAsync(int id)
+    {
+        var workLog = await _workLogService.GetAsync(id);
+        if (workLog is null)
+            return;
+        Session = workLog;
+        TaskTitle = workLog.TaskTitle;
+        WhatWasDone = workLog.WhatWasDone ?? string.Empty;
+        Result = workLog.Result ?? string.Empty;
+        Learned = workLog.Learned ?? string.Empty;
+        Blocker = workLog.Blocker ?? string.Empty;
+        NextStep = workLog.NextStep ?? string.Empty;
+        await LoadEvidenceAsync(workLog);
+        SessionChanged?.Invoke();
+    }
+
     private async Task LoadScopeItemsAsync(int problemId)
     {
         var items = await _scopeItemService.GetByProblemAsync(problemId);
@@ -241,13 +315,66 @@ public sealed class WorkSessionViewModel : ObservableObject
         }
         var duration = SelectedDuration == "Bỏ qua" ? (int?)null :
             int.Parse(SelectedDuration.Split(' ')[0], System.Globalization.CultureInfo.InvariantCulture);
-        var result = await _workLogService.StartAsync(SelectedProblem.Id, TaskTitle, duration);
+        var result = await _workLogService.StartAsync(SelectedProblem.Id, TaskTitle, duration, SelectedScopeItem?.Id);
         if (!result.Succeeded)
         {
             _dialogs.ShowMessage("Chưa bắt đầu được phiên", result.Error ?? "Vui lòng thử lại.", true);
             return;
         }
         await RefreshAsync();
+    }
+
+    private async Task SaveTaskTitleAsync()
+    {
+        if (Session is null)
+            return;
+        var id = Session.Id;
+        var result = await _workLogService.UpdateTaskTitleAsync(id, TaskTitle);
+        if (!result.Succeeded)
+        {
+            _dialogs.ShowMessage("Chưa cập nhật được nhiệm vụ", result.Error ?? "Nội dung vẫn còn trên màn hình. Vui lòng thử lại.", true);
+            return;
+        }
+        await LoadSessionDetailsAsync(id);
+    }
+
+    private async Task SaveQuickScopeAsync()
+    {
+        if (Session is null)
+            return;
+        var result = await _scopeItemService.SaveAsync(Session.ProblemId, null,
+            new ScopeItemDraft(QuickScopeTitle, QuickScopeReason, QuickScopeStatus));
+        if (!result.Succeeded)
+        {
+            _dialogs.ShowMessage("Chưa ghi nhận được chủ đề", result.Error ?? "Nội dung vẫn còn trên màn hình. Vui lòng thử lại.", true);
+            return;
+        }
+
+        QuickScopeTitle = string.Empty;
+        QuickScopeReason = string.Empty;
+        QuickScopeStatus = ScopeItemStatus.Backlog;
+        IsQuickScopeFormVisible = false;
+        await LoadScopeItemsAsync(Session.ProblemId);
+    }
+
+    private void CancelQuickScope()
+    {
+        QuickScopeTitle = string.Empty;
+        QuickScopeReason = string.Empty;
+        QuickScopeStatus = ScopeItemStatus.Backlog;
+        IsQuickScopeFormVisible = false;
+    }
+
+    private void OpenRelatedProblem()
+    {
+        if (Session is not null)
+            OpenProblemRequested?.Invoke(Session.ProblemId, null);
+    }
+
+    private void OpenRelatedScopeItem()
+    {
+        if (Session?.ScopeItemId is int scopeItemId)
+            OpenProblemRequested?.Invoke(Session.ProblemId, scopeItemId);
     }
 
     private Task PauseAsync() => RunSessionActionAsync(_workLogService.PauseAsync, "Tạm dừng phiên");
@@ -268,14 +395,81 @@ public sealed class WorkSessionViewModel : ObservableObject
     {
         if (Session is null)
             return;
-        var result = await _workLogService.SaveReportAsync(Session.Id,
+        var id = Session.Id;
+        var result = await _workLogService.SaveReportAsync(id,
             new WorkLogReportDraft(WhatWasDone, Result, Learned, Blocker, NextStep));
         if (!result.Succeeded)
         {
             _dialogs.ShowMessage("Chưa lưu được báo cáo", result.Error ?? "Nội dung vẫn còn trên màn hình. Vui lòng thử lại.", true);
             return;
         }
-        await RefreshAsync();
+        await LoadSessionDetailsAsync(id);
+    }
+
+    public async Task<bool> SavePendingChangesAsync(bool refreshAfterSave = true)
+    {
+        if (Session is null || !HasUnsavedChanges)
+            return true;
+        if (!string.IsNullOrWhiteSpace(EvidenceDescription))
+        {
+            _dialogs.ShowMessage("Chưa lưu mô tả ảnh", "Chọn ảnh để đính kèm mô tả này hoặc xóa mô tả trước khi rời màn hình.", true);
+            return false;
+        }
+
+        var id = Session.Id;
+        if (CanUpdateTask && !Same(TaskTitle, Session.TaskTitle))
+        {
+            var taskResult = await _workLogService.UpdateTaskTitleAsync(id, TaskTitle);
+            if (!taskResult.Succeeded)
+            {
+                _dialogs.ShowMessage("Chưa cập nhật được nhiệm vụ", taskResult.Error ?? "Nội dung vẫn còn trên màn hình.", true);
+                return false;
+            }
+        }
+
+        if (IsReportVisible && ReportHasChanges())
+        {
+            var reportResult = await _workLogService.SaveReportAsync(id,
+                new WorkLogReportDraft(WhatWasDone, Result, Learned, Blocker, NextStep));
+            if (!reportResult.Succeeded)
+            {
+                _dialogs.ShowMessage("Chưa lưu được báo cáo", reportResult.Error ?? "Nội dung vẫn còn trên màn hình.", true);
+                return false;
+            }
+        }
+
+        if (IsQuickScopeFormVisible && (!string.IsNullOrWhiteSpace(QuickScopeTitle) ||
+            !string.IsNullOrWhiteSpace(QuickScopeReason) || QuickScopeStatus != ScopeItemStatus.Backlog))
+        {
+            var scopeResult = await _scopeItemService.SaveAsync(Session.ProblemId, null,
+                new ScopeItemDraft(QuickScopeTitle, QuickScopeReason, QuickScopeStatus));
+            if (!scopeResult.Succeeded)
+            {
+                _dialogs.ShowMessage("Chưa ghi nhận được chủ đề", scopeResult.Error ?? "Nội dung vẫn còn trên màn hình.", true);
+                return false;
+            }
+            CancelQuickScope();
+        }
+
+        if (!refreshAfterSave)
+            return true;
+
+        await LoadSessionDetailsAsync(id);
+        return !HasUnsavedChanges;
+    }
+
+    public void DiscardPendingChanges()
+    {
+        if (Session is null)
+            return;
+        TaskTitle = Session.TaskTitle;
+        WhatWasDone = Session.WhatWasDone ?? string.Empty;
+        Result = Session.Result ?? string.Empty;
+        Learned = Session.Learned ?? string.Empty;
+        Blocker = Session.Blocker ?? string.Empty;
+        NextStep = Session.NextStep ?? string.Empty;
+        EvidenceDescription = string.Empty;
+        CancelQuickScope();
     }
 
     private async Task AddEvidenceAsync()
@@ -322,6 +516,8 @@ public sealed class WorkSessionViewModel : ObservableObject
         }
         if (Session is not null)
             await LoadEvidenceAsync(Session);
+        if (!string.IsNullOrWhiteSpace(result.Error))
+            _dialogs.ShowMessage("Ảnh đã xóa, còn tệp cần dọn", result.Error, true);
     }
 
     private async Task RunSessionActionAsync(
@@ -358,6 +554,27 @@ public sealed class WorkSessionViewModel : ObservableObject
         EndCommand.NotifyCanExecuteChanged();
         AbandonCommand.NotifyCanExecuteChanged();
         SaveReportCommand.NotifyCanExecuteChanged();
+        SaveTaskTitleCommand.NotifyCanExecuteChanged();
+        ShowQuickScopeCommand.NotifyCanExecuteChanged();
+        SaveQuickScopeCommand.NotifyCanExecuteChanged();
+        CancelQuickScopeCommand.NotifyCanExecuteChanged();
         AddEvidenceCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool ReportHasChanges() => Session is not null &&
+        (!Same(WhatWasDone, Session.WhatWasDone) || !Same(Result, Session.Result) ||
+         !Same(Learned, Session.Learned) || !Same(Blocker, Session.Blocker) || !Same(NextStep, Session.NextStep));
+
+    private static bool Same(string? left, string? right) =>
+        string.Equals(left ?? string.Empty, right ?? string.Empty, StringComparison.Ordinal);
+
+    public void Dispose() => _timer.Stop();
+
+    private bool SetPendingProperty<T>(ref T field, T value)
+    {
+        if (!SetProperty(ref field, value))
+            return false;
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        return true;
     }
 }

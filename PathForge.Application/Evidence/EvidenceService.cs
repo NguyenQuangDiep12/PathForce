@@ -79,15 +79,47 @@ public sealed class EvidenceService : IEvidenceService
         var evidence = await _repository.GetByIdAsync(id, cancellationToken);
         if (evidence is null)
             return (false, "Không tìm thấy ảnh minh chứng.");
+        string? stagedPath;
         try
         {
-            await _fileStorage.DeleteAsync(evidence.RelativePath, cancellationToken);
+            stagedPath = await _fileStorage.StageDeleteAsync(evidence.RelativePath, cancellationToken);
         }
         catch (Exception)
         {
-            return (false, "Không xóa được tệp ảnh. Bản ghi vẫn được giữ lại để bạn thử lại.");
+            return (false, "Không thể chuyển ảnh vào vùng chờ xóa. Bản ghi vẫn được giữ lại để bạn thử lại.");
         }
-        await _repository.DeleteAsync(id, cancellationToken);
+
+        try
+        {
+            await _repository.DeleteAsync(id, cancellationToken);
+        }
+        catch (Exception)
+        {
+            if (stagedPath is not null)
+            {
+                try
+                {
+                    await _fileStorage.RestoreStagedAsync(stagedPath, evidence.RelativePath, CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    return (false, "Không xóa được bản ghi ảnh. Tệp được giữ an toàn trong vùng chờ dọn với tên " + stagedPath + ".");
+                }
+            }
+            return (false, "Không xóa được bản ghi ảnh. Tệp ảnh đã được khôi phục; bạn có thể thử lại.");
+        }
+
+        if (stagedPath is not null)
+        {
+            try
+            {
+                await _fileStorage.DeleteAsync(stagedPath, cancellationToken);
+            }
+            catch (Exception)
+            {
+                return (true, "Bản ghi ảnh đã xóa; tệp vẫn còn trong vùng chờ dọn với tên " + stagedPath + ".");
+            }
+        }
         return (true, null);
     }
 

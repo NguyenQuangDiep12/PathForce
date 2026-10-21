@@ -5,6 +5,7 @@
     <Application.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <services:InverseVisibilityConverter x:Key="InverseVisibilityConverter" />
+        <services:EvidencePreviewConverter x:Key="EvidencePreviewConverter" />
         <SolidColorBrush x:Key="InkBrush" Color="#20211F" />
         <SolidColorBrush x:Key="MutedBrush" Color="#777A73" />
         <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />

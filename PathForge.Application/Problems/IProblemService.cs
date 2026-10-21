@@ -6,6 +6,6 @@ public interface IProblemService
     Task<ProblemDetails?> GetAsync(int id, CancellationToken cancellationToken = default);
     Task<ProblemDetails?> GetCurrentAsync(CancellationToken cancellationToken = default);
     Task<ProblemOperationResult> SaveAsync(int? id, ProblemDraft draft, CancellationToken cancellationToken = default);
-    Task<ProblemOperationResult> ChangeStatusAsync(int id, PathForge.Domain.Enums.ProblemStatus status, CancellationToken cancellationToken = default);
+    Task<ProblemOperationResult> ChangeStatusAsync(int id, PathForge.Domain.Enums.ProblemStatus status, bool userConfirmedResolution = false, CancellationToken cancellationToken = default);
     Task<ProblemOperationResult> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

@@ -6,6 +6,8 @@ namespace PathForge.Application.WorkLogs;
 public sealed record WorkLogDetails(
     int Id,
     int ProblemId,
+    int? ScopeItemId,
+    string? ScopeItemTitle,
     string ProblemTitle,
     string TaskTitle,
     int? PlannedDurationMinutes,
@@ -31,6 +33,9 @@ public sealed record WorkLogDetails(
     };
 
     public string DateText => StartedAt.ToLocalTimeFromUtc().ToString("dd/MM/yyyy HH:mm");
+    public string ScopeContext => string.IsNullOrWhiteSpace(ScopeItemTitle)
+        ? "Nhiệm vụ tự nhập, không gắn với mục phạm vi."
+        : "Mục phạm vi: " + ScopeItemTitle;
     public string Summary => new[] { Result, Learned, Blocker, NextStep }.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? "Chưa có báo cáo";
 
     public int ElapsedSeconds(DateTime utcNow) => ActiveSeconds +

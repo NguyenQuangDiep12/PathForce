@@ -9,5 +9,5 @@ public interface IProblemRepository
     Task<int> CountEvidenceAsync(int problemId, CancellationToken cancellationToken = default);
     Task<int> AddAsync(Problem problem, CancellationToken cancellationToken = default);
     Task UpdateAsync(Problem problem, CancellationToken cancellationToken = default);
-    Task DeleteAsync(int id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }

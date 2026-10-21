@@ -11,6 +11,7 @@ public sealed class PathForgeDbContext : DbContext
     public DbSet<ScopeItem> ScopeItems => Set<ScopeItem>();
     public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
     public DbSet<Evidence> Evidence => Set<Evidence>();
+    public DbSet<KnowledgeDocument> KnowledgeDocuments => Set<KnowledgeDocument>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,6 +22,12 @@ public sealed class PathForgeDbContext : DbContext
             entity.Property(problem => problem.Title).IsRequired().HasMaxLength(200);
             entity.Property(problem => problem.Goal).IsRequired().HasMaxLength(2000);
             entity.Property(problem => problem.Description).HasMaxLength(4000);
+            entity.Property(problem => problem.AnalysisWhat).HasMaxLength(2000);
+            entity.Property(problem => problem.AnalysisWhy).HasMaxLength(2000);
+            entity.Property(problem => problem.AnalysisWho).HasMaxLength(2000);
+            entity.Property(problem => problem.AnalysisWhere).HasMaxLength(2000);
+            entity.Property(problem => problem.AnalysisWhen).HasMaxLength(2000);
+            entity.Property(problem => problem.AnalysisHow).HasMaxLength(2000);
             entity.Property(problem => problem.SuccessCriteria).HasMaxLength(4000);
             entity.Property(problem => problem.NextAction).HasMaxLength(2000);
             entity.Property(problem => problem.Status).HasConversion<string>().HasMaxLength(32);
@@ -53,6 +60,8 @@ public sealed class PathForgeDbContext : DbContext
             entity.Property(log => log.Learned).HasMaxLength(4000);
             entity.Property(log => log.Blocker).HasMaxLength(4000);
             entity.Property(log => log.NextStep).HasMaxLength(2000);
+            entity.Ignore(log => log.ScopeItemTitle);
+            entity.HasIndex(log => log.ScopeItemId);
         });
 
         modelBuilder.Entity<Evidence>(entity =>
@@ -64,6 +73,16 @@ public sealed class PathForgeDbContext : DbContext
             entity.Property(item => item.Description).HasMaxLength(2000);
             entity.HasOne(item => item.WorkLog).WithMany(log => log.EvidenceItems)
                 .HasForeignKey(item => item.WorkLogId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<KnowledgeDocument>(entity =>
+        {
+            entity.ToTable("KnowledgeDocuments");
+            entity.HasKey(document => document.Id);
+            entity.Property(document => document.Title).IsRequired().HasMaxLength(300);
+            entity.Property(document => document.Content).IsRequired();
+            entity.Property(document => document.CreatedAt).IsRequired();
+            entity.Property(document => document.UpdatedAt).IsRequired();
         });
     }
 }

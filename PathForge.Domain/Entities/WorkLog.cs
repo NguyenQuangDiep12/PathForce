@@ -6,6 +6,7 @@ public sealed class WorkLog
 {
     public int Id { get; set; }
     public int ProblemId { get; set; }
+    public int? ScopeItemId { get; set; }
     public string TaskTitle { get; set; } = string.Empty;
     public int? PlannedDurationMinutes { get; set; }
     public DateTime StartedAt { get; set; }
@@ -21,5 +22,6 @@ public sealed class WorkLog
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public Problem? Problem { get; set; }
+    public string? ScopeItemTitle { get; set; }
     public ICollection<Evidence> EvidenceItems { get; set; } = new List<Evidence>();
 }
