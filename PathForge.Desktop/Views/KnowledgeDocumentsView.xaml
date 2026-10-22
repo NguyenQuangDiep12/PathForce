@@ -5,74 +5,128 @@
              Unloaded="KnowledgeDocumentsView_Unloaded">
     <UserControl.Resources>
         <Style x:Key="RibbonButtonStyle" TargetType="Button">
-            <Setter Property="MinWidth" Value="32" />
-            <Setter Property="MinHeight" Value="30" />
-            <Setter Property="Padding" Value="7,4" />
+            <Setter Property="MinWidth" Value="34" />
+            <Setter Property="MinHeight" Value="32" />
+            <Setter Property="Padding" Value="8,5" />
             <Setter Property="Margin" Value="2" />
             <Setter Property="Background" Value="White" />
-            <Setter Property="BorderBrush" Value="#D9DCD5" />
+            <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Foreground" Value="#252722" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonChrome" Property="Background" Value="{StaticResource AccentSoftBrush}" /></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonChrome" Property="Background" Value="#D5E9DE" /></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{StaticResource MutedBrush}" /></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <Style x:Key="RibbonComboStyle" TargetType="ComboBox">
-            <Setter Property="Height" Value="30" />
+            <Setter Property="Height" Value="34" />
             <Setter Property="Margin" Value="2" />
-            <Setter Property="Padding" Value="5,2" />
+            <Setter Property="Padding" Value="6,3" />
         </Style>
     </UserControl.Resources>
-    <Grid Margin="28,24">
+    <Grid x:Name="PageLayout" Margin="28,24">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="14" />
+            <RowDefinition x:Name="PageHeaderRow" Height="Auto" />
+            <RowDefinition x:Name="PageHeaderSpacerRow" Height="14" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <DockPanel>
+        <Grid x:Name="PageHeaderGrid">
             <StackPanel>
-                <TextBlock Text="Tài liệu kiến thức" FontSize="29" FontWeight="SemiBold" />
-                <TextBlock Text="Soạn và lưu kiến thức cùng định dạng, danh sách và hình ảnh trên máy này." Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" />
+                <TextBlock Text="KHÔNG GIAN TRI THỨC" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AccentBrush}" />
+                <TextBlock Text="Tài liệu kiến thức" FontSize="29" FontWeight="SemiBold" Margin="0,2,0,0" />
+                <TextBlock Text="Lưu ghi chú, hướng dẫn và tài liệu tham khảo của bạn." Margin="0,3,0,0" Foreground="{StaticResource MutedBrush}" />
             </StackPanel>
-        </DockPanel>
+            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Background="{StaticResource AccentSoftBrush}"
+                    CornerRadius="16" Padding="12,7" Margin="12,0,0,0">
+                <TextBlock Text="●  LƯU TRÊN THIẾT BỊ NÀY" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+            </Border>
+        </Grid>
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="286" />
-                <ColumnDefinition Width="18" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition x:Name="LibraryColumn" Width="260" MinWidth="180" />
+                <ColumnDefinition x:Name="LibrarySplitterColumn" Width="10" />
+                <ColumnDefinition Width="*" MinWidth="360" />
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="15">
+            <Border Grid.Column="0" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14" Padding="16">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top">
-                        <Button Content="＋  Tài liệu mới" Command="{Binding NewDocumentCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch" />
-                        <DockPanel Margin="0,12,0,8" LastChildFill="False">
-                            <Button Content="Tìm" Command="{Binding SearchCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="7,0,0,0" Padding="9,7" />
-                            <TextBox x:Name="SearchBox" Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Padding="8" BorderBrush="{StaticResource LineBrush}" VerticalContentAlignment="Center" KeyDown="SearchBox_KeyDown" />
+                        <DockPanel Margin="1,0,1,9">
+                            <TextBlock Text="THƯ VIỆN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" />
+                            <TextBlock Text="{Binding Documents.Count, StringFormat='{}{0} tài liệu'}" DockPanel.Dock="Right" FontSize="11" Foreground="{StaticResource MutedBrush}" />
                         </DockPanel>
-                        <TextBlock Text="Tài liệu đã lưu" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Margin="2,3,0,5" />
+                        <Button Content="＋  Tạo tài liệu mới" Command="{Binding NewDocumentCommand}" Style="{StaticResource PrimaryButtonStyle}" HorizontalAlignment="Stretch" />
+                        <TextBlock Text="Tài liệu của bạn" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Margin="1,16,0,7" />
+                        <DockPanel Margin="0,0,0,10" LastChildFill="False">
+                            <Button Content="Tìm" Command="{Binding SearchCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" Margin="7,0,0,0" Padding="11,7" MinHeight="40" />
+                            <TextBox x:Name="SearchBox" Text="{Binding Keyword, UpdateSourceTrigger=PropertyChanged}" Padding="10,8"
+                                     BorderBrush="{StaticResource LineBrush}" VerticalContentAlignment="Center" KeyDown="SearchBox_KeyDown"
+                                     ToolTip="Tìm theo tên tài liệu" />
+                        </DockPanel>
                     </StackPanel>
                     <Grid>
                         <ListBox ItemsSource="{Binding Documents}" SelectedItem="{Binding SelectedDocument, Mode=TwoWay}"
-                                 BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                 BorderThickness="0" Background="Transparent" Padding="0,2,3,0"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                    <Setter Property="Padding" Value="0" />
+                                    <Setter Property="Margin" Value="0,0,0,8" />
+                                    <Setter Property="BorderThickness" Value="0" />
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                            </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#F7F8F5" CornerRadius="7" Padding="10" Margin="0,0,0,6">
+                                    <Border x:Name="DocumentCard" Background="#F7F9F7" BorderBrush="{StaticResource LineBrush}"
+                                            BorderThickness="1" CornerRadius="10" Padding="12">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding UpdatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Margin="0,5,0,0" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}"
+                                                       TextWrapping="Wrap" MaxHeight="58" TextTrimming="CharacterEllipsis" />
+                                            <DockPanel Margin="0,10,0,0">
+                                                <TextBlock Text="Cập nhật" FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                                                <TextBlock Text="{Binding UpdatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" DockPanel.Dock="Right"
+                                                           FontSize="11" Foreground="{StaticResource MutedBrush}" />
+                                            </DockPanel>
                                         </StackPanel>
                                     </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
+                                            <Setter TargetName="DocumentCard" Property="Background" Value="{StaticResource AccentSoftBrush}" />
+                                            <Setter TargetName="DocumentCard" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsMouseOver}" Value="True">
+                                            <Setter TargetName="DocumentCard" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <TextBlock Text="Chưa có tài liệu phù hợp. Nhấn ‘Tài liệu mới’ để bắt đầu."
+                        <TextBlock Text="Không tìm thấy tài liệu phù hợp. Hãy thử từ khóa khác hoặc tạo tài liệu mới."
                                    Visibility="{Binding HasDocuments, Converter={StaticResource InverseVisibilityConverter}}"
-                                   Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="8,15,8,0"
+                                   Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="8,18,8,0"
                                    VerticalAlignment="Top" IsHitTestVisible="False" />
                     </Grid>
                 </DockPanel>
             </Border>
 
-            <Border Grid.Column="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="12" Padding="18">
+            <Border x:Name="DocumentCard" Grid.Column="2" Background="White" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="14" Padding="18">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -80,29 +134,44 @@
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
-                    <DockPanel LastChildFill="False">
-                        <StackPanel>
+                    <Grid x:Name="DocumentActionRow">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel x:Name="DocumentTitlePanel" Margin="0,0,12,0">
                             <TextBlock Text="Tên tài liệu" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" Margin="1,0,0,5" />
                             <TextBox x:Name="TitleBox" Text="{Binding Title, UpdateSourceTrigger=LostFocus}" FontSize="18" FontWeight="SemiBold"
-                                     Padding="9,7" BorderBrush="{StaticResource LineBrush}" MinWidth="260" />
+                                     Padding="11,8" BorderBrush="{StaticResource LineBrush}" HorizontalAlignment="Stretch" />
                         </StackPanel>
-                        <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="10,0,0,0">
-                            <Button x:Name="SaveButton" Content="Lưu  Ctrl+S" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,7,0" Padding="12,8" />
-                            <Button Content="Đóng tài liệu" Command="{Binding CloseDocumentCommand}" Style="{StaticResource SecondaryButtonStyle}" Padding="10,8" />
+                        <WrapPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,0,0">
+                            <Button x:Name="ToggleLibraryButton" Content="Ẩn danh sách" Click="ToggleLibrary_Click"
+                                    Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,7,0" Padding="10,8"
+                                    ToolTip="Ẩn danh sách để dành thêm chỗ cho vùng soạn thảo" />
+                            <Button x:Name="FocusModeButton" Content="Toàn trang" Click="FocusMode_Click"
+                                    Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,7,0" Padding="10,8"
+                                    ToolTip="Ẩn thanh công cụ để mở rộng vùng nhập liệu" />
+                            <Button x:Name="SaveButton" Content="Lưu  Ctrl+S" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,7,0" Padding="14,8" />
+                            <Button Content="Đóng" Command="{Binding CloseDocumentCommand}" Style="{StaticResource SecondaryButtonStyle}" Padding="12,8" ToolTip="Đóng tài liệu đang mở" />
                         </WrapPanel>
-                    </DockPanel>
-                    <DockPanel Grid.Row="1" Margin="1,7,1,8">
-                        <TextBlock Text="{Binding Status}" Foreground="{StaticResource MutedBrush}" />
+                    </Grid>
+                    <DockPanel x:Name="DocumentStatusBar" Grid.Row="1" Margin="1,9,1,10">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,7,0" />
+                            <TextBlock Text="{Binding Status}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text=" · Chưa lưu" Foreground="#A64B35" Margin="5,0,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                        </StackPanel>
                         <TextBlock Text="{Binding LastUpdatedText}" Foreground="{StaticResource MutedBrush}" DockPanel.Dock="Right" />
-                        <TextBlock Text=" ●" Foreground="#B45F28" Visibility="{Binding IsDirty, Converter={StaticResource BooleanToVisibilityConverter}}" DockPanel.Dock="Right" />
                     </DockPanel>
 
-                    <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" MaxHeight="186">
+                    <ScrollViewer x:Name="FormattingToolbar" Grid.Row="2" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" MaxHeight="166">
                         <WrapPanel>
-                            <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="5" Margin="0,0,5,5">
+                            <Border Background="#F8FAF8" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="9" Padding="7" Margin="0,0,6,6">
                                 <StackPanel>
+                                    <TextBlock Text="VĂN BẢN" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,3" />
                                     <WrapPanel>
-                                        <ComboBox x:Name="FontFamilyBox" Style="{StaticResource RibbonComboStyle}" Width="118" SelectedIndex="0" SelectionChanged="FontFamilyBox_SelectionChanged">
+                                        <ComboBox x:Name="FontFamilyBox" Style="{StaticResource RibbonComboStyle}" Width="132" SelectedIndex="0" SelectionChanged="FontFamilyBox_SelectionChanged">
                                             <ComboBoxItem Content="Calibri" />
                                             <ComboBoxItem Content="Arial" />
                                             <ComboBoxItem Content="Segoe UI" />
@@ -121,24 +190,24 @@
                                             <TextBlock Text="U" TextDecorations="Underline" />
                                         </Button>
                                     </WrapPanel>
-                                    <WrapPanel HorizontalAlignment="Center">
-                                        <TextBlock Text="Phông chữ và ký tự" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,0" />
-                                        <ComboBox x:Name="TextColorBox" Style="{StaticResource RibbonComboStyle}" Width="68" SelectedIndex="0" SelectionChanged="TextColorBox_SelectionChanged" ToolTip="Màu chữ">
+                                    <WrapPanel>
+                                        <ComboBox x:Name="TextColorBox" Style="{StaticResource RibbonComboStyle}" Width="100" SelectedIndex="0" SelectionChanged="TextColorBox_SelectionChanged" ToolTip="Màu chữ">
                                             <ComboBoxItem Content="Màu chữ" Tag="#20211F" /><ComboBoxItem Content="Xanh lá" Tag="#315E52" />
                                             <ComboBoxItem Content="Xanh dương" Tag="#245A9A" /><ComboBoxItem Content="Đỏ" Tag="#A33A32" />
                                             <ComboBoxItem Content="Tím" Tag="#70499C" />
                                         </ComboBox>
-                                        <ComboBox x:Name="HighlightBox" Style="{StaticResource RibbonComboStyle}" Width="82" SelectedIndex="0" SelectionChanged="HighlightBox_SelectionChanged" ToolTip="Màu đánh dấu">
+                                        <ComboBox x:Name="HighlightBox" Style="{StaticResource RibbonComboStyle}" Width="100" SelectedIndex="0" SelectionChanged="HighlightBox_SelectionChanged" ToolTip="Màu đánh dấu">
                                             <ComboBoxItem Content="Đánh dấu" Tag="#FFF29A" /><ComboBoxItem Content="Xanh nhạt" Tag="#D9EAD3" />
                                             <ComboBoxItem Content="Lam nhạt" Tag="#D9EAF7" /><ComboBoxItem Content="Bỏ nền" Tag="Transparent" />
                                         </ComboBox>
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>
-                            <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="5" Margin="0,0,5,5">
+                            <Border Background="#F8FAF8" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="9" Padding="7" Margin="0,0,6,6">
                                 <StackPanel>
+                                    <TextBlock Text="ĐOẠN VĂN" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,3" />
                                     <WrapPanel>
-                                        <ComboBox x:Name="StyleBox" Style="{StaticResource RibbonComboStyle}" Width="124" SelectedIndex="0" SelectionChanged="StyleBox_SelectionChanged">
+                                        <ComboBox x:Name="StyleBox" Style="{StaticResource RibbonComboStyle}" Width="140" SelectedIndex="0" SelectionChanged="StyleBox_SelectionChanged">
                                             <ComboBoxItem Content="Văn bản thường" Tag="Normal" />
                                             <ComboBoxItem Content="Title" Tag="Title" />
                                             <ComboBoxItem Content="Subtitle" Tag="Subtitle" />
@@ -159,8 +228,9 @@
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>
-                            <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="5" Margin="0,0,5,5">
+                            <Border Background="#F8FAF8" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="9" Padding="7" Margin="0,0,6,6">
                                 <StackPanel>
+                                    <TextBlock Text="HÌNH ẢNH" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,3" />
                                     <WrapPanel>
                                         <Button Content="Ảnh" Click="InsertImage_Click" Style="{StaticResource RibbonButtonStyle}" ToolTip="Chèn ảnh tại con trỏ" />
                                         <Button Content="Đường phân cách" Click="InsertRule_Click" Style="{StaticResource RibbonButtonStyle}" />
@@ -171,31 +241,32 @@
                                         <Button x:Name="ImageRightButton" Content="Ảnh phải" Click="ImageRight_Click" Style="{StaticResource RibbonButtonStyle}" IsEnabled="False" />
                                         <Button x:Name="ImageDeleteButton" Content="Xóa ảnh" Click="ImageDelete_Click" Style="{StaticResource RibbonButtonStyle}" IsEnabled="False" />
                                     </WrapPanel>
-                                    <WrapPanel HorizontalAlignment="Center">
+                                    <WrapPanel>
                                         <TextBlock x:Name="ImageSelectionLabel" Text="Chưa chọn ảnh" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,0" />
                                         <TextBlock Text="Ảnh PNG/JPG/JPEG · tối đa 10 MB · bản sao trong PathForge" FontSize="10" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="4,0" />
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>
-                            <Border Background="#F7F8F5" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="6" Padding="5" Margin="0,0,0,5">
+                            <Border Background="#F8FAF8" BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="9" Padding="7" Margin="0,0,0,6">
                                 <StackPanel>
+                                    <TextBlock Text="THU PHÓNG" FontSize="10" FontWeight="Bold" Foreground="{StaticResource MutedBrush}" Margin="4,0,0,3" />
                                     <WrapPanel>
                                         <Button Content="−" Click="ZoomOut_Click" Style="{StaticResource RibbonButtonStyle}" ToolTip="Thu nhỏ" />
                                         <TextBlock x:Name="ZoomLabel" Text="100%" MinWidth="45" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center" />
                                         <Button Content="+" Click="ZoomIn_Click" Style="{StaticResource RibbonButtonStyle}" ToolTip="Phóng to" />
                                         <Button Content="100%" Click="ZoomReset_Click" Style="{StaticResource RibbonButtonStyle}" ToolTip="Đặt lại mức phóng" />
                                     </WrapPanel>
-                                    <TextBlock Text="Chế độ xem" FontSize="10" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" />
                                 </StackPanel>
                             </Border>
                         </WrapPanel>
                     </ScrollViewer>
 
-                    <Grid Grid.Row="3" Background="#E9EAE6" Margin="0,8,0,0">
-                        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="22">
-                            <Border Width="816" MinHeight="1056" Background="White" BorderBrush="#D4D6D1" BorderThickness="1" Padding="0"
-                                    HorizontalAlignment="Center" VerticalAlignment="Top">
-                                <RichTextBox x:Name="DocumentEditor" Width="814" Height="1054" BorderThickness="0" Padding="0"
+                    <Grid x:Name="EditorViewport" Grid.Row="3" Background="#EEF2EF" Margin="0,8,0,0" SizeChanged="EditorViewport_SizeChanged">
+                        <ScrollViewer x:Name="DocumentScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="18">
+                            <Border x:Name="DocumentPage" Width="816" MinHeight="1056" Background="White" BorderBrush="#D4DCD7" BorderThickness="1" Padding="0"
+                                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,12">
+                                <RichTextBox x:Name="DocumentEditor" Width="814" Height="1054" BorderThickness="0" Padding="66,62"
+                                             FontFamily="Segoe UI" FontSize="14" Foreground="{StaticResource InkBrush}" Background="White"
                                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                              AcceptsTab="True" IsDocumentEnabled="True" SpellCheck.IsEnabled="False"
                                              TextChanged="DocumentEditor_TextChanged" PreviewKeyDown="DocumentEditor_PreviewKeyDown" />
@@ -204,6 +275,11 @@
                     </Grid>
                 </Grid>
             </Border>
+            <GridSplitter Grid.Column="1" Width="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" ShowsPreview="True"
+                          Background="Transparent" Cursor="SizeWE" ToolTip="Kéo để thay đổi độ rộng danh sách và vùng soạn thảo" />
+            <Border x:Name="LibrarySplitterGrip" Grid.Column="1" Width="2" Height="52" CornerRadius="1" Background="{StaticResource LineBrush}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
         </Grid>
     </Grid>
 </UserControl>

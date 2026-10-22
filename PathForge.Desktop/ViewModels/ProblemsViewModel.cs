@@ -69,7 +69,7 @@ public sealed class ProblemsViewModel : ObservableObject
         _evidenceOpener = evidenceOpener;
         SearchCommand = new AsyncRelayCommand(() => RefreshAsync());
         SaveCommand = new AsyncRelayCommand(SaveAsync);
-        NewProblemCommand = new RelayCommand(() => _ = RequestNewProblemAsync());
+        NewProblemCommand = new RelayCommand(BeginNewProblem);
         DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => _selectedProblemId.HasValue);
         MoveToInProgressCommand = new AsyncRelayCommand(() => ChangeStatusAsync(ProblemStatus.InProgress), CanMoveToInProgress);
         MoveToBlockedCommand = new AsyncRelayCommand(() => ChangeStatusAsync(ProblemStatus.Blocked), CanMoveToBlocked);
@@ -189,16 +189,9 @@ public sealed class ProblemsViewModel : ObservableObject
         get => _selectedProblem;
         set
         {
-            var previous = _selectedProblem;
-            if (!SetProperty(ref _selectedProblem, value) || _isRefreshingList)
+            if (!SetProperty(ref _selectedProblem, value) || _isRefreshingList || value is not null)
                 return;
-            if (value is null)
-            {
-                ++_selectionGeneration;
-                return;
-            }
-            if (previous?.Id != value.Id)
-                _ = HandleProblemSelectionAsync(previous, value, ++_selectionGeneration);
+            ++_selectionGeneration;
         }
     }
 
@@ -289,19 +282,32 @@ public sealed class ProblemsViewModel : ObservableObject
 
     public void FocusNewProblem() => BeginNewProblem();
 
-    private async Task RequestNewProblemAsync()
+    public async Task SelectProblemAsync(ProblemListItem problem)
     {
-        if (HasUnsavedChanges)
+        if (_isRefreshingList)
+            return;
+
+        if (SelectedProblem?.Id != problem.Id)
+            SelectedProblem = problem;
+
+        if (_selectedProblemId == problem.Id && !IsNew)
         {
-            var choice = _dialogs.AskToSaveChanges("Thông tin bài toán");
-            if (choice == UnsavedChangesChoice.Cancel)
-                return;
-            if (choice == UnsavedChangesChoice.Discard)
-                DiscardPendingChanges();
-            else if (!await SavePendingChangesAsync())
+            if (HasUnsavedChanges || (Title == problem.Title && Goal == problem.Goal))
                 return;
         }
-        BeginNewProblem();
+
+        var previous = _selectedProblemId.HasValue
+            ? Problems.FirstOrDefault(item => item.Id == _selectedProblemId.Value)
+            : null;
+        var generation = ++_selectionGeneration;
+        try
+        {
+            await HandleProblemSelectionAsync(previous, problem, generation);
+        }
+        catch (Exception)
+        {
+            ValidationMessage = "Không thể tải thông tin bài toán. Vui lòng chọn lại bài toán.";
+        }
     }
 
     public async Task OpenProblemAsync(int problemId, int? scopeItemId = null)
@@ -316,6 +322,7 @@ public sealed class ProblemsViewModel : ObservableObject
     {
         ++_selectionGeneration;
         _isExplicitlyCreatingNewProblem = true;
+        Keyword = string.Empty;
         SelectedProblemTab = 0;
         SelectedProblem = null;
         _selectedProblemId = null;
@@ -521,9 +528,18 @@ public sealed class ProblemsViewModel : ObservableObject
             }
             if (choice == UnsavedChangesChoice.Discard)
                 DiscardPendingChanges();
-            else if (!await SavePendingChangesAsync())
+            else if (!await SavePendingChangesAsync(refreshAfterSave: false))
             {
                 RestoreProblemSelection(previous, generation);
+                return;
+            }
+            else
+            {
+                // Keep the user's clicked row as the destination. Refreshing
+                // during this save used to reselect the row being edited and
+                // cancel the pending navigation to the newly clicked problem.
+                await RefreshAsync(next.Id);
+                ProblemChanged?.Invoke();
                 return;
             }
         }

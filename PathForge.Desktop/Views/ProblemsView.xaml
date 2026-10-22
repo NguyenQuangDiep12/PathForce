@@ -67,7 +67,7 @@
                 <TextBlock Text="Bài toán" FontSize="27" FontWeight="SemiBold" />
                 <TextBlock Text="Xác định điều cần giải quyết, mục tiêu và bước tiếp theo." Margin="0,4,0,0" Foreground="{StaticResource MutedBrush}" />
             </StackPanel>
-            <Button DockPanel.Dock="Right" Content="＋  Tạo bài toán" Command="{Binding NewProblemCommand}"
+            <Button DockPanel.Dock="Right" Content="＋  Tạo bài toán" Click="CreateNewProblem_Click"
                     Style="{StaticResource PrimaryButtonStyle}" VerticalAlignment="Center" />
         </DockPanel>
 
@@ -90,7 +90,8 @@
                         </DockPanel>
                     </StackPanel>
                     <Grid Margin="0,10,0,0">
-                        <ListBox ItemsSource="{Binding Problems}" SelectedItem="{Binding SelectedProblem, Mode=TwoWay}"
+                        <ListBox x:Name="ProblemList" ItemsSource="{Binding Problems}" SelectedItem="{Binding SelectedProblem, Mode=TwoWay}"
+                                 SelectionChanged="ProblemList_SelectionChanged"
                                  BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
                             <ListBox.ItemTemplate>
@@ -113,7 +114,7 @@
                         <StackPanel Visibility="{Binding HasProblems, Converter={StaticResource InverseVisibilityConverter}}"
                                     Margin="10,20,10,0" VerticalAlignment="Top">
                             <TextBlock Text="{Binding EmptyListMessage}" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
-                            <Button Content="＋ Tạo bài toán" Command="{Binding NewProblemCommand}" Style="{StaticResource SecondaryButtonStyle}"
+                            <Button Content="＋ Tạo bài toán" Click="CreateNewProblem_Click" Style="{StaticResource SecondaryButtonStyle}"
                                     HorizontalAlignment="Left" Margin="0,12,0,0" />
                         </StackPanel>
                     </Grid>
@@ -161,7 +162,7 @@
                                     <StackPanel Margin="0,0,8,0">
                                         <TextBlock Text="MỤC TIÊU VÀ BỐI CẢNH" Style="{StaticResource SectionTitle}" />
                                         <TextBlock Text="Tên bài toán *" Style="{StaticResource FieldLabel}" />
-                                        <TextBox Text="{Binding Title, UpdateSourceTrigger=LostFocus}" />
+                                        <TextBox x:Name="TitleInput" Text="{Binding Title, UpdateSourceTrigger=LostFocus}" />
                                         <TextBlock Text="Mục tiêu cần đạt *" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
                                         <TextBox Text="{Binding Goal, UpdateSourceTrigger=LostFocus}" MinHeight="70" Style="{StaticResource MultilineBox}" />
                                         <TextBlock Text="Tiêu chí thành công" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
@@ -378,7 +379,7 @@
                             <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
                                 <Button Content="Xóa" Command="{Binding DeleteCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"
                                         Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                <Button Content="＋ Tạo bài toán mới" Command="{Binding NewProblemCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"
+                                <Button Content="＋ Tạo bài toán mới" Click="CreateNewProblem_Click" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,8,0"
                                         Visibility="{Binding IsExisting, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <Button Content="{Binding SaveButtonText}" Command="{Binding SaveCommand}" Style="{StaticResource PrimaryButtonStyle}" />
                             </WrapPanel>

@@ -22,6 +22,11 @@ public partial class KnowledgeDocumentsView : UserControl
     private InlineUIContainer? _selectedImageContainer;
     private Image? _selectedImage;
     private double _zoom = 1.0;
+    private double _libraryWidthBeforeCollapse = 260;
+    private bool _isLibraryCollapsed;
+    private bool _isFocusMode;
+    private bool _focusModeInitialized;
+    private bool _libraryWasExpandedBeforeFocus;
 
     public KnowledgeDocumentsView()
     {
@@ -49,6 +54,15 @@ public partial class KnowledgeDocumentsView : UserControl
             _isSubscribed = true;
         }
         LoadContent(viewModel.CurrentContent);
+        if (!_focusModeInitialized)
+        {
+            SetFocusMode(true);
+            _focusModeInitialized = true;
+        }
+        else if (_isFocusMode)
+        {
+            Dispatcher.BeginInvoke(new Action(ApplyFocusEditorSize), DispatcherPriority.Loaded);
+        }
         Dispatcher.BeginInvoke(new Action(() => _isEditorReady = true), DispatcherPriority.ContextIdle);
     }
 
@@ -61,6 +75,132 @@ public partial class KnowledgeDocumentsView : UserControl
             _isSubscribed = false;
             _viewModel.RegisterEditorSnapshotProvider(CaptureContentForSave);
         }
+    }
+
+    private void ToggleLibrary_Click(object sender, RoutedEventArgs e)
+    {
+        SetLibraryCollapsed(!_isLibraryCollapsed);
+    }
+
+    private void SetLibraryCollapsed(bool collapsed)
+    {
+        if (_isLibraryCollapsed == collapsed)
+            return;
+
+        if (!collapsed)
+        {
+            LibraryColumn.MinWidth = 180;
+            LibraryColumn.Width = new GridLength(Math.Max(180, _libraryWidthBeforeCollapse));
+            LibrarySplitterColumn.Width = new GridLength(10);
+            LibrarySplitterGrip.Visibility = Visibility.Visible;
+            ToggleLibraryButton.Content = "Ẩn danh sách";
+            ToggleLibraryButton.ToolTip = "Ẩn danh sách để dành thêm chỗ cho vùng soạn thảo";
+        }
+        else
+        {
+            if (LibraryColumn.ActualWidth >= LibraryColumn.MinWidth)
+                _libraryWidthBeforeCollapse = LibraryColumn.ActualWidth;
+
+            LibraryColumn.MinWidth = 0;
+            LibraryColumn.Width = new GridLength(0);
+            LibrarySplitterColumn.Width = new GridLength(0);
+            LibrarySplitterGrip.Visibility = Visibility.Collapsed;
+            ToggleLibraryButton.Content = "Hiện danh sách";
+            ToggleLibraryButton.ToolTip = "Hiện lại thư viện tài liệu";
+        }
+
+        _isLibraryCollapsed = collapsed;
+    }
+
+    private void FocusMode_Click(object sender, RoutedEventArgs e)
+    {
+        SetFocusMode(!_isFocusMode);
+    }
+
+    private void SetFocusMode(bool enabled)
+    {
+        if (_isFocusMode == enabled)
+            return;
+
+        _isFocusMode = enabled;
+        if (enabled)
+        {
+            _libraryWasExpandedBeforeFocus = !_isLibraryCollapsed;
+            if (_libraryWasExpandedBeforeFocus)
+                SetLibraryCollapsed(true);
+
+            PageLayout.Margin = new Thickness(8);
+            PageHeaderGrid.Visibility = Visibility.Collapsed;
+            PageHeaderSpacerRow.Height = new GridLength(0);
+            DocumentCard.Padding = new Thickness(8);
+            DocumentTitlePanel.Visibility = Visibility.Collapsed;
+            ToggleLibraryButton.Visibility = Visibility.Collapsed;
+            DocumentStatusBar.Visibility = Visibility.Collapsed;
+            FormattingToolbar.Visibility = Visibility.Collapsed;
+            EditorViewport.Margin = new Thickness(0);
+            DocumentScrollViewer.Padding = new Thickness(0);
+            FocusModeButton.Content = "Hiện công cụ";
+            FocusModeButton.ToolTip = "Hiện tên tài liệu và thanh công cụ soạn thảo";
+            ZoomLabel.Text = "100%";
+            _zoom = 1.0;
+        }
+        else
+        {
+            PageLayout.Margin = new Thickness(28, 24, 28, 24);
+            PageHeaderGrid.Visibility = Visibility.Visible;
+            PageHeaderSpacerRow.Height = new GridLength(14);
+            DocumentCard.Padding = new Thickness(18);
+            DocumentTitlePanel.Visibility = Visibility.Visible;
+            ToggleLibraryButton.Visibility = Visibility.Visible;
+            DocumentStatusBar.Visibility = Visibility.Visible;
+            FormattingToolbar.Visibility = Visibility.Visible;
+            EditorViewport.Margin = new Thickness(0, 8, 0, 0);
+            DocumentScrollViewer.Padding = new Thickness(18);
+            FocusModeButton.Content = "Toàn trang";
+            FocusModeButton.ToolTip = "Ẩn thanh công cụ để mở rộng vùng nhập liệu";
+
+            DocumentPage.Width = 816;
+            DocumentPage.Height = double.NaN;
+            DocumentPage.MinHeight = 1056;
+            DocumentPage.HorizontalAlignment = HorizontalAlignment.Center;
+            DocumentPage.VerticalAlignment = VerticalAlignment.Top;
+            DocumentPage.Margin = new Thickness(0, 4, 0, 12);
+            DocumentPage.LayoutTransform = Transform.Identity;
+            DocumentEditor.Width = 814;
+            DocumentEditor.Height = 1054;
+            _zoom = 1.0;
+            ZoomLabel.Text = "100%";
+
+            if (_libraryWasExpandedBeforeFocus && _isLibraryCollapsed)
+                SetLibraryCollapsed(false);
+        }
+
+        if (enabled)
+            Dispatcher.BeginInvoke(new Action(ApplyFocusEditorSize), DispatcherPriority.Loaded);
+    }
+
+    private void EditorViewport_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (_isFocusMode)
+            ApplyFocusEditorSize();
+    }
+
+    private void ApplyFocusEditorSize()
+    {
+        if (!_isFocusMode || EditorViewport.ActualWidth <= 0 || EditorViewport.ActualHeight <= 0)
+            return;
+
+        var pageWidth = Math.Max(320, EditorViewport.ActualWidth - DocumentScrollViewer.Padding.Left - DocumentScrollViewer.Padding.Right - 2);
+        var pageHeight = Math.Max(280, EditorViewport.ActualHeight - DocumentScrollViewer.Padding.Top - DocumentScrollViewer.Padding.Bottom - 2);
+        DocumentPage.Width = pageWidth;
+        DocumentPage.Height = pageHeight;
+        DocumentPage.MinHeight = 0;
+        DocumentPage.HorizontalAlignment = HorizontalAlignment.Stretch;
+        DocumentPage.VerticalAlignment = VerticalAlignment.Stretch;
+        DocumentPage.Margin = new Thickness(0);
+        DocumentPage.LayoutTransform = Transform.Identity;
+        DocumentEditor.Width = Math.Max(100, pageWidth - 2);
+        DocumentEditor.Height = Math.Max(100, pageHeight - 2);
     }
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -418,7 +558,7 @@ public partial class KnowledgeDocumentsView : UserControl
     private void SetZoom(double zoom)
     {
         _zoom = zoom;
-        DocumentEditor.LayoutTransform = new ScaleTransform(_zoom, _zoom);
+        DocumentPage.LayoutTransform = new ScaleTransform(_zoom, _zoom);
         ZoomLabel.Text = $"{Math.Round(_zoom * 100)}%";
     }
 

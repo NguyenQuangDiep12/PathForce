@@ -84,6 +84,33 @@ public sealed class ProblemsViewModelTests
         Assert.Equal(2, problems.Count);
     }
 
+    [Fact]
+    public async Task SelectingProblemFromListLoadsSavedDetailsForEditing()
+    {
+        var problems = new FakeProblemService();
+        var viewModel = CreateViewModel(problems);
+        viewModel.Title = "Bài toán đã lưu";
+        viewModel.Goal = "Mục tiêu đã lưu";
+        viewModel.Description = "Mô tả đã lưu";
+        viewModel.AnalysisWhy = "Lý do đã lưu";
+        viewModel.SuccessCriteria = "Tiêu chí đã lưu";
+        viewModel.NextAction = "Bước tiếp theo đã lưu";
+        Assert.True(await viewModel.SavePendingChangesAsync());
+
+        viewModel.FocusNewProblem();
+        var savedListItem = Assert.Single(viewModel.Problems);
+        await viewModel.SelectProblemAsync(savedListItem);
+
+        Assert.False(viewModel.IsNew);
+        Assert.Equal(savedListItem.Id, viewModel.SelectedProblem?.Id);
+        Assert.Equal("Bài toán đã lưu", viewModel.Title);
+        Assert.Equal("Mục tiêu đã lưu", viewModel.Goal);
+        Assert.Equal("Mô tả đã lưu", viewModel.Description);
+        Assert.Equal("Lý do đã lưu", viewModel.AnalysisWhy);
+        Assert.Equal("Tiêu chí đã lưu", viewModel.SuccessCriteria);
+        Assert.Equal("Bước tiếp theo đã lưu", viewModel.NextAction);
+    }
+
     private static ProblemsViewModel CreateViewModel(FakeProblemService problems) => new(
         problems,
         new FakeScopeItemService(),
