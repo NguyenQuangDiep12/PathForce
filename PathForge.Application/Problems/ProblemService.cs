@@ -13,7 +13,7 @@ public sealed class ProblemService : IProblemService
     public async Task<IReadOnlyList<ProblemListItem>> SearchAsync(string? keyword, CancellationToken cancellationToken = default)
     {
         var problems = await _repository.SearchAsync(keyword, cancellationToken);
-        return problems.Select(ToListItem).ToList();
+        return problems.Take(200).Select(ToListItem).ToList();
     }
 
     public async Task<ProblemDetails?> GetAsync(int id, CancellationToken cancellationToken = default)
@@ -24,12 +24,7 @@ public sealed class ProblemService : IProblemService
 
     public async Task<ProblemDetails?> GetCurrentAsync(CancellationToken cancellationToken = default)
     {
-        var problems = await _repository.SearchAsync(null, cancellationToken);
-        var current = problems
-            .Where(problem => problem.Status != ProblemStatus.Resolved)
-            .OrderByDescending(problem => problem.Status == ProblemStatus.InProgress || problem.Status == ProblemStatus.Blocked)
-            .ThenByDescending(problem => problem.UpdatedAt)
-            .FirstOrDefault();
+        var current = await _repository.GetCurrentAsync(cancellationToken);
         return current is null ? null : ToDetails(current);
     }
 

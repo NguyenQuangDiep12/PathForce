@@ -19,7 +19,8 @@
                         <TextBlock Text="{Binding Message}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
                         <Button Content="Mở nội dung liên quan" Command="{Binding OpenCommand}" Style="{StaticResource SecondaryButtonStyle}" DockPanel.Dock="Right" />
                     </DockPanel>
-                    <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult, Mode=TwoWay}" BorderThickness="0" Background="Transparent">
+                    <ListBox ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult, Mode=TwoWay}" BorderThickness="0" Background="Transparent"
+                             VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="#F7F8F5" CornerRadius="7" Padding="13" Margin="0,0,0,8">

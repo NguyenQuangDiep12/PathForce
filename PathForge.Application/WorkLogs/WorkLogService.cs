@@ -27,6 +27,13 @@ public sealed class WorkLogService : IWorkLogService
         return workLog is null ? null : ToDetails(workLog);
     }
 
+    public async Task<WorkLogDetails?> GetLatestCompletedAsync(
+        int problemId, CancellationToken cancellationToken = default)
+    {
+        var workLog = await _repository.GetLatestCompletedAsync(problemId, cancellationToken);
+        return workLog is null ? null : ToDetails(workLog);
+    }
+
     public async Task<WorkLogDetails?> GetAsync(int id, CancellationToken cancellationToken = default)
     {
         var workLog = await _repository.GetByIdAsync(id, cancellationToken);

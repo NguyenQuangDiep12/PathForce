@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using PathForge.Application.KnowledgeDocuments;
 using PathForge.Desktop.Services;
 using PathForge.Desktop.ViewModels;
 using System.IO;
@@ -27,6 +28,7 @@ public partial class KnowledgeDocumentsView : UserControl
     private bool _isFocusMode;
     private bool _focusModeInitialized;
     private bool _libraryWasExpandedBeforeFocus;
+    private bool _isUpdatingToolbar;
 
     public KnowledgeDocumentsView()
     {
@@ -59,10 +61,6 @@ public partial class KnowledgeDocumentsView : UserControl
             SetFocusMode(true);
             _focusModeInitialized = true;
         }
-        else if (_isFocusMode)
-        {
-            Dispatcher.BeginInvoke(new Action(ApplyFocusEditorSize), DispatcherPriority.Loaded);
-        }
         Dispatcher.BeginInvoke(new Action(() => _isEditorReady = true), DispatcherPriority.ContextIdle);
     }
 
@@ -73,7 +71,7 @@ public partial class KnowledgeDocumentsView : UserControl
         {
             _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
             _isSubscribed = false;
-            _viewModel.RegisterEditorSnapshotProvider(CaptureContentForSave);
+            _viewModel.RegisterEditorSnapshotProvider(null);
         }
     }
 
@@ -138,7 +136,9 @@ public partial class KnowledgeDocumentsView : UserControl
             DocumentStatusBar.Visibility = Visibility.Collapsed;
             FormattingToolbar.Visibility = Visibility.Collapsed;
             EditorViewport.Margin = new Thickness(0);
-            DocumentScrollViewer.Padding = new Thickness(0);
+            DocumentPage.MaxWidth = double.PositiveInfinity;
+            DocumentPage.Padding = new Thickness(12);
+            DocumentPage.Margin = new Thickness(0);
             FocusModeButton.Content = "Hiện công cụ";
             FocusModeButton.ToolTip = "Hiện tên tài liệu và thanh công cụ soạn thảo";
             ZoomLabel.Text = "100%";
@@ -155,19 +155,14 @@ public partial class KnowledgeDocumentsView : UserControl
             DocumentStatusBar.Visibility = Visibility.Visible;
             FormattingToolbar.Visibility = Visibility.Visible;
             EditorViewport.Margin = new Thickness(0, 8, 0, 0);
-            DocumentScrollViewer.Padding = new Thickness(18);
+            DocumentPage.MaxWidth = 900;
+            DocumentPage.Padding = new Thickness(30);
+            DocumentPage.Margin = new Thickness(0, 4, 0, 12);
             FocusModeButton.Content = "Toàn trang";
             FocusModeButton.ToolTip = "Ẩn thanh công cụ để mở rộng vùng nhập liệu";
 
-            DocumentPage.Width = 816;
-            DocumentPage.Height = double.NaN;
-            DocumentPage.MinHeight = 1056;
             DocumentPage.HorizontalAlignment = HorizontalAlignment.Center;
-            DocumentPage.VerticalAlignment = VerticalAlignment.Top;
-            DocumentPage.Margin = new Thickness(0, 4, 0, 12);
-            DocumentPage.LayoutTransform = Transform.Identity;
-            DocumentEditor.Width = 814;
-            DocumentEditor.Height = 1054;
+            DocumentPage.VerticalAlignment = VerticalAlignment.Stretch;
             _zoom = 1.0;
             ZoomLabel.Text = "100%";
 
@@ -175,32 +170,6 @@ public partial class KnowledgeDocumentsView : UserControl
                 SetLibraryCollapsed(false);
         }
 
-        if (enabled)
-            Dispatcher.BeginInvoke(new Action(ApplyFocusEditorSize), DispatcherPriority.Loaded);
-    }
-
-    private void EditorViewport_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        if (_isFocusMode)
-            ApplyFocusEditorSize();
-    }
-
-    private void ApplyFocusEditorSize()
-    {
-        if (!_isFocusMode || EditorViewport.ActualWidth <= 0 || EditorViewport.ActualHeight <= 0)
-            return;
-
-        var pageWidth = Math.Max(320, EditorViewport.ActualWidth - DocumentScrollViewer.Padding.Left - DocumentScrollViewer.Padding.Right - 2);
-        var pageHeight = Math.Max(280, EditorViewport.ActualHeight - DocumentScrollViewer.Padding.Top - DocumentScrollViewer.Padding.Bottom - 2);
-        DocumentPage.Width = pageWidth;
-        DocumentPage.Height = pageHeight;
-        DocumentPage.MinHeight = 0;
-        DocumentPage.HorizontalAlignment = HorizontalAlignment.Stretch;
-        DocumentPage.VerticalAlignment = VerticalAlignment.Stretch;
-        DocumentPage.Margin = new Thickness(0);
-        DocumentPage.LayoutTransform = Transform.Identity;
-        DocumentEditor.Width = Math.Max(100, pageWidth - 2);
-        DocumentEditor.Height = Math.Max(100, pageHeight - 2);
     }
 
     private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -212,6 +181,7 @@ public partial class KnowledgeDocumentsView : UserControl
     private void LoadContent(string content)
     {
         DocumentEditor.TextChanged -= DocumentEditor_TextChanged;
+        var loadedSuccessfully = false;
         try
         {
             _isLoadingDocument = true;
@@ -221,6 +191,7 @@ public partial class KnowledgeDocumentsView : UserControl
             SaveButton.IsEnabled = true;
             ResetSelectedImage();
             AttachImageInteractions(DocumentEditor.Document.Blocks);
+            loadedSuccessfully = true;
         }
         catch (Exception exception)
         {
@@ -235,6 +206,8 @@ public partial class KnowledgeDocumentsView : UserControl
         {
             _isLoadingDocument = false;
             DocumentEditor.TextChanged += DocumentEditor_TextChanged;
+            if (loadedSuccessfully)
+                _viewModel?.ReleaseCurrentContentAfterLoad();
         }
     }
 
@@ -251,14 +224,15 @@ public partial class KnowledgeDocumentsView : UserControl
         return KnowledgeDocumentCodec.Serialize(DocumentEditor.Document);
     }
 
-    private void DocumentEditor_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void KnowledgeDocumentsView_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
         {
+            TitleBox.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
             _viewModel?.SaveCommand.Execute(null);
             e.Handled = true;
         }
-        else if (Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.B or Key.I or Key.U)
+        else if (DocumentEditor.IsKeyboardFocusWithin && Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.B or Key.I or Key.U)
         {
             var command = e.Key switch
             {
@@ -290,41 +264,41 @@ public partial class KnowledgeDocumentsView : UserControl
 
     private void FontFamilyBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FontFamilyBox.SelectedItem is ComboBoxItem item && item.Content is string family && IsLoaded)
+        if (!_isUpdatingToolbar && FontFamilyBox.SelectedItem is ComboBoxItem item && item.Content is string family && IsLoaded)
             ApplyTextProperty(TextElement.FontFamilyProperty, new FontFamily(family));
     }
 
     private void FontSizeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (FontSizeBox.SelectedItem is ComboBoxItem item && double.TryParse(item.Content?.ToString(), out var size) && IsLoaded)
+        if (!_isUpdatingToolbar && FontSizeBox.SelectedItem is ComboBoxItem item && double.TryParse(item.Content?.ToString(), out var size) && IsLoaded)
             ApplyTextProperty(TextElement.FontSizeProperty, size);
     }
 
     private void TextColorBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (TextColorBox.SelectedItem is ComboBoxItem item && item.Tag is string color && IsLoaded)
-            ApplyTextProperty(TextElement.ForegroundProperty, new SolidColorBrush((Color)ColorConverter.ConvertFromString(color)));
+        if (!_isUpdatingToolbar && TextColorBox.SelectedItem is ComboBoxItem item && item.Tag is string color && IsLoaded)
+            ApplyTextProperty(TextElement.ForegroundProperty, CreateFrozenBrush((Color)ColorConverter.ConvertFromString(color)));
     }
 
     private void HighlightBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (HighlightBox.SelectedItem is not ComboBoxItem item || item.Tag is not string color || !IsLoaded)
+        if (_isUpdatingToolbar || HighlightBox.SelectedItem is not ComboBoxItem item || item.Tag is not string color || !IsLoaded)
             return;
-        var brush = color == "Transparent" ? Brushes.Transparent : new SolidColorBrush((Color)ColorConverter.ConvertFromString(color));
+        var brush = color == "Transparent" ? Brushes.Transparent : CreateFrozenBrush((Color)ColorConverter.ConvertFromString(color));
         ApplyTextProperty(TextElement.BackgroundProperty, brush);
     }
 
     private void StyleBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (StyleBox.SelectedItem is not ComboBoxItem item || item.Tag is not string style || !IsLoaded)
+        if (_isUpdatingToolbar || StyleBox.SelectedItem is not ComboBoxItem item || item.Tag is not string style || !IsLoaded)
             return;
 
         var (size, weight, foreground, margin, italic) = style switch
         {
             "Title" => (28d, FontWeights.Bold, Brushes.Black, new Thickness(0, 0, 0, 12), FontStyles.Normal),
             "Subtitle" => (16d, FontWeights.Normal, Brushes.Gray, new Thickness(0, 0, 0, 12), FontStyles.Italic),
-            "Heading1" => (22d, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(49, 94, 82)), new Thickness(0, 18, 0, 8), FontStyles.Normal),
-            "Heading2" => (18d, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(49, 94, 82)), new Thickness(0, 14, 0, 6), FontStyles.Normal),
+            "Heading1" => (22d, FontWeights.Bold, CreateFrozenBrush(Color.FromRgb(49, 94, 82)), new Thickness(0, 18, 0, 8), FontStyles.Normal),
+            "Heading2" => (18d, FontWeights.SemiBold, CreateFrozenBrush(Color.FromRgb(49, 94, 82)), new Thickness(0, 14, 0, 6), FontStyles.Normal),
             "Heading3" => (15d, FontWeights.SemiBold, Brushes.Black, new Thickness(0, 10, 0, 4), FontStyles.Normal),
             _ => (14d, FontWeights.Normal, Brushes.Black, new Thickness(0, 0, 0, 8), FontStyles.Normal)
         };
@@ -367,22 +341,37 @@ public partial class KnowledgeDocumentsView : UserControl
 
         try
         {
-            var sourceFrame = DecodeImage(sourcePath);
-            var stored = await _viewModel.StoreImageAsync(sourcePath);
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(stored.FullPath, UriKind.Absolute);
-            bitmap.EndInit();
-            bitmap.Freeze();
+            var (sourceWidth, sourceHeight) = await Task.Run(() => DecodeImageDimensions(sourcePath));
+            string? resizedPath = null;
+            StoredKnowledgeImage stored;
+            try
+            {
+                if (sourceWidth > 1600)
+                {
+                    var targetPath = Path.Combine(Path.GetTempPath(), $"pathforge-{Guid.NewGuid():N}{Path.GetExtension(sourcePath)}");
+                    resizedPath = targetPath;
+                    await Task.Run(() => ResizeImageForStorage(sourcePath, targetPath));
+                }
+                stored = await _viewModel.StoreImageAsync(resizedPath ?? sourcePath);
+            }
+            finally
+            {
+                if (resizedPath is not null && File.Exists(resizedPath))
+                {
+                    try { File.Delete(resizedPath); }
+                    catch (IOException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
+            }
+            var bitmap = await Task.Run(() => DecodeDisplayBitmap(stored.FullPath));
 
             var maxWidth = 620d;
-            var scale = Math.Min(1d, maxWidth / sourceFrame.PixelWidth);
+            var scale = Math.Min(1d, maxWidth / sourceWidth);
             var image = new Image
             {
                 Source = bitmap,
-                Width = sourceFrame.PixelWidth * scale,
-                Height = sourceFrame.PixelHeight * scale,
+                Width = sourceWidth * scale,
+                Height = sourceHeight * scale,
                 Stretch = Stretch.Uniform,
                 Tag = stored.RelativePath,
                 ToolTip = "Ảnh trong tài liệu · chọn ảnh để căn chỉnh, đổi cỡ hoặc xóa"
@@ -400,20 +389,51 @@ public partial class KnowledgeDocumentsView : UserControl
         }
     }
 
-    private static BitmapFrame DecodeImage(string path)
+    private static (int Width, int Height) DecodeImageDimensions(string path)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
         if (extension is not ".png" and not ".jpg" and not ".jpeg")
             throw new InvalidDataException("Chỉ hỗ trợ PNG, JPG và JPEG.");
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.DelayCreation | BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.None);
         var frame = decoder.Frames.FirstOrDefault() ?? throw new InvalidDataException("Tệp ảnh không có khung hình hợp lệ.");
         if ((long)frame.PixelWidth * frame.PixelHeight > 40_000_000)
             throw new InvalidDataException("Ảnh có kích thước điểm ảnh quá lớn để chèn an toàn.");
         if ((extension == ".png" && decoder is not PngBitmapDecoder) ||
             (extension is ".jpg" or ".jpeg" && decoder is not JpegBitmapDecoder))
             throw new InvalidDataException("Phần mở rộng không khớp với định dạng ảnh.");
-        return frame;
+        return (frame.PixelWidth, frame.PixelHeight);
+    }
+
+    private static void ResizeImageForStorage(string sourcePath, string destinationPath)
+    {
+        var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+        var resized = new BitmapImage();
+        resized.BeginInit();
+        resized.CacheOption = BitmapCacheOption.OnLoad;
+        resized.DecodePixelWidth = 1600;
+        resized.UriSource = new Uri(sourcePath, UriKind.Absolute);
+        resized.EndInit();
+        resized.Freeze();
+
+        BitmapEncoder encoder = extension == ".png"
+            ? new PngBitmapEncoder()
+            : new JpegBitmapEncoder { QualityLevel = 90 };
+        encoder.Frames.Add(BitmapFrame.Create(resized));
+        using var output = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        encoder.Save(output);
+    }
+
+    private static BitmapImage DecodeDisplayBitmap(string path)
+    {
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.DecodePixelWidth = 1240;
+        bitmap.UriSource = new Uri(path, UriKind.Absolute);
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
     }
 
     private void AttachImageInteractions(BlockCollection blocks)
@@ -541,7 +561,7 @@ public partial class KnowledgeDocumentsView : UserControl
             return;
         var rule = new Paragraph
         {
-            BorderBrush = new SolidColorBrush(Color.FromRgb(197, 201, 194)),
+            BorderBrush = CreateFrozenBrush(Color.FromRgb(197, 201, 194)),
             BorderThickness = new Thickness(0, 0, 0, 1),
             Margin = new Thickness(0, 10, 0, 10)
         };
@@ -560,6 +580,56 @@ public partial class KnowledgeDocumentsView : UserControl
         _zoom = zoom;
         DocumentPage.LayoutTransform = new ScaleTransform(_zoom, _zoom);
         ZoomLabel.Text = $"{Math.Round(_zoom * 100)}%";
+    }
+
+    private void DocumentEditor_SelectionChanged(object sender, RoutedEventArgs e)
+    {
+        if (_isLoadingDocument || !IsLoaded)
+            return;
+
+        _isUpdatingToolbar = true;
+        try
+        {
+            var selection = DocumentEditor.Selection;
+            var fontFamily = selection.GetPropertyValue(TextElement.FontFamilyProperty) as FontFamily;
+            FontFamilyBox.SelectedItem = fontFamily is null
+                ? null
+                : FontFamilyBox.Items.OfType<ComboBoxItem>().FirstOrDefault(item =>
+                    string.Equals(item.Content?.ToString(), fontFamily.Source, StringComparison.OrdinalIgnoreCase));
+
+            var fontSize = selection.GetPropertyValue(TextElement.FontSizeProperty);
+            FontSizeBox.SelectedItem = fontSize is double size
+                ? FontSizeBox.Items.OfType<ComboBoxItem>().FirstOrDefault(item =>
+                    double.TryParse(item.Content?.ToString(), out var itemSize) && Math.Abs(itemSize - size) < 0.01)
+                : null;
+
+            var weight = selection.GetPropertyValue(TextElement.FontWeightProperty);
+            var styleTag = fontSize is double knownSize && weight is FontWeight knownWeight
+                ? MatchStyle(knownSize, knownWeight)
+                : null;
+            StyleBox.SelectedItem = styleTag is null
+                ? null
+                : StyleBox.Items.OfType<ComboBoxItem>().FirstOrDefault(item => Equals(item.Tag, styleTag));
+        }
+        finally
+        {
+            _isUpdatingToolbar = false;
+        }
+    }
+
+    private static string? MatchStyle(double size, FontWeight weight) =>
+        size >= 27.5 && weight == FontWeights.Bold ? "Title" :
+        Math.Abs(size - 16) < 0.01 ? "Subtitle" :
+        Math.Abs(size - 22) < 0.01 && weight == FontWeights.Bold ? "Heading1" :
+        Math.Abs(size - 18) < 0.01 && weight == FontWeights.SemiBold ? "Heading2" :
+        Math.Abs(size - 15) < 0.01 && weight == FontWeights.SemiBold ? "Heading3" :
+        Math.Abs(size - 14) < 0.01 && weight == FontWeights.Normal ? "Normal" : null;
+
+    private static SolidColorBrush CreateFrozenBrush(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
     }
 
     private void FocusEditor()

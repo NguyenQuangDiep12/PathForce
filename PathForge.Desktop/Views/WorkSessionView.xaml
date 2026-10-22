@@ -100,7 +100,7 @@
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
-                                <Image Source="{Binding SelectedEvidence.AbsolutePath, Converter={StaticResource EvidencePreviewConverter}}"
+                                <Image Source="{Binding SelectedEvidence.AbsolutePath, Converter={StaticResource EvidencePreviewConverter}, IsAsync=True}"
                                        MaxHeight="240" MaxWidth="420" Stretch="Uniform" HorizontalAlignment="Left" Margin="0,8,0,0"
                                        Visibility="{Binding HasSelectedEvidence, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                 <WrapPanel Margin="0,8,0,0">

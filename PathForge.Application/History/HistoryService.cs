@@ -47,7 +47,7 @@ public sealed class HistoryService : IHistoryService
             item.Description ?? item.Problem?.Title ?? "Ảnh minh chứng", item.CreatedAt,
             item.ProblemId, null, item.WorkLogId, item.Id, _fileStorage.GetAbsolutePath(item.RelativePath))));
 
-        return results.OrderByDescending(result => result.Date).ToList();
+        return results.OrderByDescending(result => result.Date).Take(200).ToList();
     }
 
     private static string FirstNonEmpty(params string?[] values) =>

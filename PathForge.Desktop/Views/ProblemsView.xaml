@@ -93,7 +93,9 @@
                         <ListBox x:Name="ProblemList" ItemsSource="{Binding Problems}" SelectedItem="{Binding SelectedProblem, Mode=TwoWay}"
                                  SelectionChanged="ProblemList_SelectionChanged"
                                  BorderThickness="0" Background="Transparent" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" HorizontalContentAlignment="Stretch">
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True"
+                                 VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
+                                 HorizontalContentAlignment="Stretch">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Border Padding="11" Margin="0,0,0,6" Background="#F6F8F6" BorderBrush="{StaticResource LineBrush}"
@@ -322,7 +324,7 @@
                                     <Grid>
                                         <TextBlock Text="Chọn một ảnh để xem trước." Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                                    Visibility="{Binding HasSelectedEvidence, Converter={StaticResource InverseVisibilityConverter}}" />
-                                        <Image Source="{Binding SelectedEvidence.AbsolutePath, Converter={StaticResource EvidencePreviewConverter}}" Stretch="Uniform"
+                                        <Image Source="{Binding SelectedEvidence.AbsolutePath, Converter={StaticResource EvidencePreviewConverter}, IsAsync=True}" Stretch="Uniform"
                                                Visibility="{Binding HasSelectedEvidence, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     </Grid>
                                 </Border>

@@ -27,9 +27,9 @@ public static class KnowledgeDocumentCodec
         var packageBytes = Convert.FromBase64String(serialized.Substring(FormatPrefix.Length));
         using var stream = new MemoryStream(packageBytes, writable: false);
         new TextRange(document.ContentStart, document.ContentEnd).Load(stream, DataFormats.XamlPackage);
-        document.PageWidth = 816;
-        document.PageHeight = 1056;
-        document.PagePadding = new Thickness(72);
+        document.PageWidth = double.NaN;
+        document.PageHeight = double.NaN;
+        document.PagePadding = new Thickness(0);
         document.ColumnWidth = double.PositiveInfinity;
         return document;
     }
@@ -38,9 +38,9 @@ public static class KnowledgeDocumentCodec
     {
         var document = new FlowDocument(new Paragraph())
         {
-            PageWidth = 816,
-            PageHeight = 1056,
-            PagePadding = new Thickness(72),
+            PageWidth = double.NaN,
+            PageHeight = double.NaN,
+            PagePadding = new Thickness(0),
             ColumnWidth = double.PositiveInfinity,
             FontFamily = new FontFamily("Calibri"),
             FontSize = 14,

@@ -35,17 +35,15 @@ public sealed class KnowledgeDocumentService : IKnowledgeDocumentService
         try
         {
             var now = DateTime.UtcNow;
-            KnowledgeDocument document;
             var isNew = !id.HasValue;
-            if (id.HasValue)
+            if (id.HasValue && !await _repository.ExistsAsync(id.Value, cancellationToken))
+                throw new InvalidOperationException("Không tìm thấy tài liệu cần lưu.");
+
+            var document = new KnowledgeDocument
             {
-                document = await _repository.GetByIdAsync(id.Value, cancellationToken)
-                    ?? throw new InvalidOperationException("Không tìm thấy tài liệu cần lưu.");
-            }
-            else
-            {
-                document = new KnowledgeDocument { CreatedAt = now };
-            }
+                Id = id.GetValueOrDefault(),
+                CreatedAt = now
+            };
 
             document.Title = title.Trim();
             document.Content = content ?? string.Empty;

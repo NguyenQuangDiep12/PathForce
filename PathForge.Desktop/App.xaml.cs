@@ -50,7 +50,10 @@ public partial class App : System.Windows.Application
 
             var factory = _serviceProvider.GetRequiredService<IDbContextFactory<PathForgeDbContext>>();
             await using (var context = await factory.CreateDbContextAsync())
+            {
                 await context.Database.MigrateAsync();
+                await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+            }
 
             var window = new MainWindow
             {

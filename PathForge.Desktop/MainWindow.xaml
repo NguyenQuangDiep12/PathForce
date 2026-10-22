@@ -4,6 +4,7 @@
         xmlns:views="clr-namespace:PathForge.Desktop.Views"
         xmlns:vm="clr-namespace:PathForge.Desktop.ViewModels"
         Title="PathForge" Height="820" Width="1360" MinHeight="680" MinWidth="1040"
+        UseLayoutRounding="True" SnapsToDevicePixels="True"
         WindowStartupLocation="CenterScreen" Background="{StaticResource CanvasBrush}" Foreground="{StaticResource InkBrush}" Closing="Window_Closing">
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:DashboardViewModel}"><views:DashboardView /></DataTemplate>
@@ -93,7 +94,18 @@
             </Grid>
         </Border>
         <Border Grid.Column="1" Background="{StaticResource CanvasBrush}">
-            <ContentControl Content="{Binding CurrentViewModel}" />
+            <Grid>
+                <ContentControl Content="{Binding Dashboard}"
+                                Visibility="{Binding IsDashboardActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ContentControl Content="{Binding Problems}"
+                                Visibility="{Binding IsProblemsActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ContentControl Content="{Binding WorkSession}"
+                                Visibility="{Binding IsPracticeActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ContentControl Content="{Binding History}"
+                                Visibility="{Binding IsHistoryActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <ContentControl Content="{Binding KnowledgeDocuments}"
+                                Visibility="{Binding IsKnowledgeDocumentsActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            </Grid>
         </Border>
     </Grid>
 </Window>

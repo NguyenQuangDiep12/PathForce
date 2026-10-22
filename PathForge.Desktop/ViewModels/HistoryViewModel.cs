@@ -12,6 +12,7 @@ public sealed class HistoryViewModel : ObservableObject
     private string _keyword = string.Empty;
     private string _message = string.Empty;
     private HistorySearchResult? _selectedResult;
+    private ObservableCollection<HistorySearchResult> _results = new();
 
     public HistoryViewModel(IHistoryService historyService, IEvidenceOpener evidenceOpener, IUserDialogService dialogs)
     {
@@ -24,7 +25,11 @@ public sealed class HistoryViewModel : ObservableObject
     }
 
     public event Action<HistorySearchResult>? OpenResultRequested;
-    public ObservableCollection<HistorySearchResult> Results { get; } = new();
+    public ObservableCollection<HistorySearchResult> Results
+    {
+        get => _results;
+        private set => SetProperty(ref _results, value);
+    }
     public AsyncRelayCommand SearchCommand { get; }
     public RelayCommand OpenCommand { get; }
     public string Keyword { get => _keyword; set => SetProperty(ref _keyword, value); }
@@ -43,15 +48,13 @@ public sealed class HistoryViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(Keyword))
         {
-            Results.Clear();
+            Results = new ObservableCollection<HistorySearchResult>();
             Message = "Nhập từ khóa để tìm trong bài toán, mục phạm vi, báo cáo và minh chứng.";
             return;
         }
 
         var results = await _historyService.SearchAsync(Keyword);
-        Results.Clear();
-        foreach (var result in results)
-            Results.Add(result);
+        Results = new ObservableCollection<HistorySearchResult>(results);
         SelectedResult = Results.FirstOrDefault();
         Message = Results.Count == 0 ? "Không tìm thấy kết quả phù hợp." : $"Tìm thấy {Results.Count} kết quả.";
     }

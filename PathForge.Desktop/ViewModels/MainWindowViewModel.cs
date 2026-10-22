@@ -34,10 +34,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
         ShowDashboardCommand = new RelayCommand(() =>
         {
-            _ = NavigateAsync(async () =>
+            _ = NavigateAsync(() =>
             {
                 CurrentViewModel = Dashboard;
-                await Dashboard.RefreshAsync();
+                return Task.CompletedTask;
             });
         });
         ShowProblemsCommand = new RelayCommand(() => _ = ShowProblemsAsync());

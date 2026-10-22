@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PathForge.Application.Problems;
 using PathForge.Application.Evidence;
 using PathForge.Domain.Entities;
+using PathForge.Domain.Enums;
 using PathForge.Infrastructure.Persistence;
 
 namespace PathForge.Infrastructure.Repositories;
@@ -22,12 +23,48 @@ public sealed class EfProblemRepository : IProblemRepository
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
         var query = context.Problems.AsNoTracking();
         var problems = await query.OrderByDescending(problem => problem.UpdatedAt).ToListAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(keyword))
-            return problems;
-        var term = keyword.Trim();
-        return problems.Where(problem => Matches(term, problem.Title, problem.Goal, problem.Description,
-            problem.AnalysisWhat, problem.AnalysisWhy, problem.AnalysisWho, problem.AnalysisWhere,
-            problem.AnalysisWhen, problem.AnalysisHow, problem.SuccessCriteria, problem.NextAction)).ToList();
+        var matchingProblems = string.IsNullOrWhiteSpace(keyword)
+            ? problems
+            : problems.Where(problem => Matches(keyword.Trim(), problem.Title, problem.Goal, problem.Description,
+                problem.AnalysisWhat, problem.AnalysisWhy, problem.AnalysisWho, problem.AnalysisWhere,
+                problem.AnalysisWhen, problem.AnalysisHow, problem.SuccessCriteria, problem.NextAction)).ToList();
+        return matchingProblems.Take(200).Select(problem => new Problem
+        {
+            Id = problem.Id,
+            Title = problem.Title,
+            Goal = problem.Goal,
+            Status = problem.Status,
+            UpdatedAt = problem.UpdatedAt
+        }).ToList();
+    }
+
+    public async Task<Problem?> GetCurrentAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.Problems.AsNoTracking()
+            .Where(problem => problem.Status != ProblemStatus.Resolved)
+            .OrderByDescending(problem => problem.Status == ProblemStatus.InProgress || problem.Status == ProblemStatus.Blocked)
+            .ThenByDescending(problem => problem.UpdatedAt)
+            .Select(problem => new Problem
+            {
+                Id = problem.Id,
+                Title = problem.Title,
+                Goal = problem.Goal,
+                Description = problem.Description,
+                AnalysisWhat = problem.AnalysisWhat,
+                AnalysisWhy = problem.AnalysisWhy,
+                AnalysisWho = problem.AnalysisWho,
+                AnalysisWhere = problem.AnalysisWhere,
+                AnalysisWhen = problem.AnalysisWhen,
+                AnalysisHow = problem.AnalysisHow,
+                SuccessCriteria = problem.SuccessCriteria,
+                NextAction = problem.NextAction,
+                Status = problem.Status,
+                RequiresEvidence = problem.RequiresEvidence,
+                CreatedAt = problem.CreatedAt,
+                UpdatedAt = problem.UpdatedAt
+            })
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<Problem?> GetByIdAsync(int id, CancellationToken cancellationToken = default)

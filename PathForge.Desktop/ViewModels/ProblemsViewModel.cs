@@ -50,6 +50,7 @@ public sealed class ProblemsViewModel : ObservableObject
     private string _evidenceDescription = string.Empty;
     private string _evidenceMessage = string.Empty;
     private WorkLogDetails? _selectedWorkLog;
+    private ObservableCollection<ProblemListItem> _problems = new();
 
     public ProblemsViewModel(
         IProblemService problemService,
@@ -93,7 +94,17 @@ public sealed class ProblemsViewModel : ObservableObject
 
     public event Action? ProblemChanged;
     public event Action<int>? OpenWorkLogRequested;
-    public ObservableCollection<ProblemListItem> Problems { get; } = new();
+    public ObservableCollection<ProblemListItem> Problems
+    {
+        get => _problems;
+        private set
+        {
+            if (!SetProperty(ref _problems, value))
+                return;
+            OnPropertyChanged(nameof(HasProblems));
+            OnPropertyChanged(nameof(EmptyListMessage));
+        }
+    }
     public ObservableCollection<ScopeItemDetails> ScopeItems { get; } = new();
     public ObservableCollection<EvidenceDetails> EvidenceItems { get; } = new();
     public ObservableCollection<WorkLogDetails> RecentWorkLogs { get; } = new();
@@ -246,11 +257,7 @@ public sealed class ProblemsViewModel : ObservableObject
 
         ProblemListItem? toLoad = null;
         _isRefreshingList = true;
-        Problems.Clear();
-        foreach (var item in items)
-            Problems.Add(item);
-        OnPropertyChanged(nameof(HasProblems));
-        OnPropertyChanged(nameof(EmptyListMessage));
+        Problems = new ObservableCollection<ProblemListItem>(items.Take(200));
 
         if (selectId.HasValue)
         {

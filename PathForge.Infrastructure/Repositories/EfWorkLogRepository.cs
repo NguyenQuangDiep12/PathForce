@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using PathForge.Application.WorkLogs;
 using PathForge.Domain.Entities;
 using PathForge.Domain.Enums;
@@ -8,6 +9,28 @@ namespace PathForge.Infrastructure.Repositories;
 
 public sealed class EfWorkLogRepository : IWorkLogRepository
 {
+    private static readonly Expression<Func<WorkLog, WorkLog>> WorkLogDetailsProjection = log => new WorkLog
+    {
+        Id = log.Id,
+        ProblemId = log.ProblemId,
+        ScopeItemId = log.ScopeItemId,
+        TaskTitle = log.TaskTitle,
+        PlannedDurationMinutes = log.PlannedDurationMinutes,
+        StartedAt = log.StartedAt,
+        EndedAt = log.EndedAt,
+        ActiveSeconds = log.ActiveSeconds,
+        LastResumedAt = log.LastResumedAt,
+        Status = log.Status,
+        WhatWasDone = log.WhatWasDone,
+        Result = log.Result,
+        Learned = log.Learned,
+        Blocker = log.Blocker,
+        NextStep = log.NextStep,
+        CreatedAt = log.CreatedAt,
+        UpdatedAt = log.UpdatedAt,
+        Problem = log.Problem == null ? null : new Problem { Title = log.Problem.Title }
+    };
+
     private readonly IDbContextFactory<PathForgeDbContext> _contextFactory;
 
     public EfWorkLogRepository(IDbContextFactory<PathForgeDbContext> contextFactory) => _contextFactory = contextFactory;
@@ -15,8 +38,10 @@ public sealed class EfWorkLogRepository : IWorkLogRepository
     public async Task<IReadOnlyList<WorkLog>> GetHistoryAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var logs = await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
-            .OrderByDescending(log => log.StartedAt).ToListAsync(cancellationToken);
+        var logs = await context.WorkLogs.AsNoTracking()
+            .OrderByDescending(log => log.StartedAt)
+            .Select(WorkLogDetailsProjection)
+            .ToListAsync(cancellationToken);
         await LoadScopeTitlesAsync(context, logs, cancellationToken);
         return logs;
     }
@@ -24,20 +49,38 @@ public sealed class EfWorkLogRepository : IWorkLogRepository
     public async Task<IReadOnlyList<WorkLog>> GetByProblemAsync(int problemId, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var logs = await context.WorkLogs.AsNoTracking().Include(log => log.Problem)
-            .Where(log => log.ProblemId == problemId).OrderByDescending(log => log.StartedAt).ToListAsync(cancellationToken);
+        var logs = await context.WorkLogs.AsNoTracking()
+            .Where(log => log.ProblemId == problemId)
+            .OrderByDescending(log => log.StartedAt)
+            .Select(WorkLogDetailsProjection)
+            .ToListAsync(cancellationToken);
         await LoadScopeTitlesAsync(context, logs, cancellationToken);
         return logs;
+    }
+
+    public async Task<WorkLog?> GetLatestCompletedAsync(int problemId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
+        var log = await context.WorkLogs.AsNoTracking()
+            .Where(item => item.ProblemId == problemId && item.Status == WorkLogStatus.Completed)
+            .OrderByDescending(item => item.StartedAt)
+            .Select(WorkLogDetailsProjection)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (log is not null)
+            await LoadScopeTitlesAsync(context, new[] { log }, cancellationToken);
+        return log;
     }
 
     public async Task<WorkLog?> GetOpenAsync(CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var log = await context.WorkLogs.AsNoTracking().Include(item => item.Problem)
+        var log = await context.WorkLogs.AsNoTracking()
             .Where(log => log.Status == WorkLogStatus.Running || log.Status == WorkLogStatus.Paused || log.Status == WorkLogStatus.AwaitingReport)
             .OrderByDescending(log => log.Status == WorkLogStatus.Running)
             .ThenByDescending(log => log.Status == WorkLogStatus.Paused)
-            .ThenByDescending(log => log.StartedAt).FirstOrDefaultAsync(cancellationToken);
+            .ThenByDescending(log => log.StartedAt)
+            .Select(WorkLogDetailsProjection)
+            .FirstOrDefaultAsync(cancellationToken);
         if (log is not null)
             await LoadScopeTitlesAsync(context, new[] { log }, cancellationToken);
         return log;
@@ -46,7 +89,8 @@ public sealed class EfWorkLogRepository : IWorkLogRepository
     public async Task<WorkLog?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         await using var context = await _contextFactory.CreateDbContextAsync(cancellationToken);
-        var log = await context.WorkLogs.AsNoTracking().Include(item => item.Problem)
+        var log = await context.WorkLogs.AsNoTracking()
+            .Select(WorkLogDetailsProjection)
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (log is not null)
             await LoadScopeTitlesAsync(context, new[] { log }, cancellationToken);

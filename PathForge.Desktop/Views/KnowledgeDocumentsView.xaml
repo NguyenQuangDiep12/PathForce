@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Loaded="KnowledgeDocumentsView_Loaded"
-             Unloaded="KnowledgeDocumentsView_Unloaded">
+             Unloaded="KnowledgeDocumentsView_Unloaded"
+             PreviewKeyDown="KnowledgeDocumentsView_PreviewKeyDown">
     <UserControl.Resources>
         <Style x:Key="RibbonButtonStyle" TargetType="Button">
             <Setter Property="MinWidth" Value="34" />
@@ -261,17 +262,15 @@
                         </WrapPanel>
                     </ScrollViewer>
 
-                    <Grid x:Name="EditorViewport" Grid.Row="3" Background="#EEF2EF" Margin="0,8,0,0" SizeChanged="EditorViewport_SizeChanged">
-                        <ScrollViewer x:Name="DocumentScrollViewer" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" Padding="18">
-                            <Border x:Name="DocumentPage" Width="816" MinHeight="1056" Background="White" BorderBrush="#D4DCD7" BorderThickness="1" Padding="0"
-                                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,4,0,12">
-                                <RichTextBox x:Name="DocumentEditor" Width="814" Height="1054" BorderThickness="0" Padding="66,62"
+                    <Grid x:Name="EditorViewport" Grid.Row="3" Background="#EEF2EF" Margin="0,8,0,0">
+                        <Border x:Name="DocumentPage" MaxWidth="900" Background="White" BorderBrush="#D4DCD7" BorderThickness="1" Padding="30"
+                                HorizontalAlignment="Center" VerticalAlignment="Stretch" Margin="0,4,0,12">
+                                <RichTextBox x:Name="DocumentEditor" BorderThickness="0" Padding="0"
                                              FontFamily="Segoe UI" FontSize="14" Foreground="{StaticResource InkBrush}" Background="White"
-                                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                                             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" UndoLimit="30"
                                              AcceptsTab="True" IsDocumentEnabled="True" SpellCheck.IsEnabled="False"
-                                             TextChanged="DocumentEditor_TextChanged" PreviewKeyDown="DocumentEditor_PreviewKeyDown" />
-                            </Border>
-                        </ScrollViewer>
+                                             SelectionChanged="DocumentEditor_SelectionChanged" TextChanged="DocumentEditor_TextChanged" />
+                        </Border>
                     </Grid>
                 </Grid>
             </Border>

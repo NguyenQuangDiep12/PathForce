@@ -6,7 +6,7 @@ namespace PathForge.Desktop.ViewModels;
 
 public sealed class KnowledgeDocumentsViewModel : ObservableObject
 {
-    private readonly IKnowledgeDocumentService _documents;
+    private readonly IKnowledgeDocumentService _documentService;
     private readonly IKnowledgeImageStorage _imageStorage;
     private readonly IUserDialogService _dialogs;
     private string _keyword = string.Empty;
@@ -22,23 +22,32 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
     private KnowledgeDocumentListItem? _selectedDocument;
     private KnowledgeDocumentListItem? _currentListItem;
     private Func<string>? _captureEditorContent;
+    private ObservableCollection<KnowledgeDocumentListItem> _documents = new();
 
     public KnowledgeDocumentsViewModel(
         IKnowledgeDocumentService documents,
         IKnowledgeImageStorage imageStorage,
         IUserDialogService dialogs)
     {
-        _documents = documents;
+        _documentService = documents;
         _imageStorage = imageStorage;
         _dialogs = dialogs;
         SearchCommand = new AsyncRelayCommand(SearchAsync);
         NewDocumentCommand = new AsyncRelayCommand(CreateNewAsync);
         SaveCommand = new AsyncRelayCommand(async () => await SaveCurrentAsync());
         CloseDocumentCommand = new AsyncRelayCommand(CloseDocumentAsync);
-        _ = SearchAsync();
     }
 
-    public ObservableCollection<KnowledgeDocumentListItem> Documents { get; } = new();
+    public ObservableCollection<KnowledgeDocumentListItem> Documents
+    {
+        get => _documents;
+        private set
+        {
+            if (!SetProperty(ref _documents, value))
+                return;
+            OnPropertyChanged(nameof(HasDocuments));
+        }
+    }
     public AsyncRelayCommand SearchCommand { get; }
     public AsyncRelayCommand NewDocumentCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
@@ -71,8 +80,10 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
         }
     }
 
-    public void RegisterEditorSnapshotProvider(Func<string> captureEditorContent) =>
+    public void RegisterEditorSnapshotProvider(Func<string>? captureEditorContent) =>
         _captureEditorContent = captureEditorContent;
+
+    public void ReleaseCurrentContentAfterLoad() => _currentContent = string.Empty;
 
     public void MarkEditorChanged()
     {
@@ -84,11 +95,8 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
     {
         try
         {
-            var results = await _documents.SearchAsync(Keyword);
-            Documents.Clear();
-            foreach (var document in results)
-                Documents.Add(document);
-            OnPropertyChanged(nameof(HasDocuments));
+            var results = await _documentService.SearchAsync(Keyword);
+            Documents = new ObservableCollection<KnowledgeDocumentListItem>(results);
             if (_currentDocumentId.HasValue)
             {
                 var refreshedCurrent = Documents.FirstOrDefault(document => document.Id == _currentDocumentId.Value);
@@ -110,7 +118,7 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
         try
         {
             var content = CaptureEditorContent();
-            var result = await _documents.SaveAsync(_currentDocumentId, Title, content);
+            var result = await _documentService.SaveAsync(_currentDocumentId, Title, content);
             if (!result.Succeeded || !result.Id.HasValue)
             {
                 Status = "Lưu thất bại. " + (result.Error ?? "Không lưu được tài liệu.");
@@ -119,7 +127,8 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
             }
 
             _currentDocumentId = result.Id.Value;
-            CurrentContent = content;
+            if (_captureEditorContent is null)
+                CurrentContent = content;
             IsDirty = false;
             var now = DateTime.Now;
             LastUpdatedText = $"Cập nhật lúc {now:dd/MM/yyyy HH:mm}";
@@ -181,7 +190,7 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
                 return;
             }
 
-            var document = await _documents.GetAsync(requested.Id);
+            var document = await _documentService.GetAsync(requested.Id);
             if (document is null)
             {
                 _dialogs.ShowMessage("Không tìm thấy tài liệu", "Tài liệu có thể đã bị xóa hoặc database đã thay đổi.", true);
@@ -221,11 +230,8 @@ public sealed class KnowledgeDocumentsViewModel : ObservableObject
 
     private async Task RefreshDocumentsAndSelectCurrentAsync()
     {
-        var results = await _documents.SearchAsync(Keyword);
-        Documents.Clear();
-        foreach (var document in results)
-            Documents.Add(document);
-        OnPropertyChanged(nameof(HasDocuments));
+        var results = await _documentService.SearchAsync(Keyword);
+        Documents = new ObservableCollection<KnowledgeDocumentListItem>(results);
 
         _currentListItem = _currentDocumentId.HasValue
             ? Documents.FirstOrDefault(document => document.Id == _currentDocumentId.Value)

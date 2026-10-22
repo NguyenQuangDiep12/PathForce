@@ -19,6 +19,8 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
     private readonly IEvidenceFilePicker _evidenceFilePicker;
     private readonly IEvidenceOpener _evidenceOpener;
     private readonly DispatcherTimer _timer;
+    private int _scopeItemsLoadGeneration;
+    private ObservableCollection<ProblemListItem> _problems = new();
     private ProblemListItem? _selectedProblem;
     private ScopeItemDetails? _selectedScopeItem;
     private WorkLogDetails? _session;
@@ -75,11 +77,19 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         OpenScopeItemCommand = new RelayCommand(OpenRelatedScopeItem, () => Session?.ScopeItemId.HasValue == true);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => UpdateElapsedText();
-        _timer.Start();
     }
 
-    public ObservableCollection<ProblemListItem> Problems { get; } = new();
-    public ObservableCollection<ScopeItemDetails> ScopeItems { get; } = new();
+    public ObservableCollection<ProblemListItem> Problems
+    {
+        get => _problems;
+        private set => SetProperty(ref _problems, value);
+    }
+    private ObservableCollection<ScopeItemDetails> _scopeItems = new();
+    public ObservableCollection<ScopeItemDetails> ScopeItems
+    {
+        get => _scopeItems;
+        private set => SetProperty(ref _scopeItems, value);
+    }
     public ObservableCollection<EvidenceDetails> EvidenceItems { get; } = new();
     public ObservableCollection<string> Durations { get; }
     public ObservableCollection<KeyValuePair<ScopeItemStatus, string>> QuickScopeStatuses { get; } = new()
@@ -113,10 +123,11 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         {
             if (!SetProperty(ref _selectedProblem, value))
                 return;
+            var generation = ++_scopeItemsLoadGeneration;
             SelectedScopeItem = null;
-            ScopeItems.Clear();
+            ScopeItems = new ObservableCollection<ScopeItemDetails>();
             if (value is not null)
-                _ = LoadScopeItemsAsync(value.Id);
+                _ = LoadScopeItemsAsync(value.Id, generation);
         }
     }
 
@@ -148,6 +159,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(HasUnsavedChanges));
             OnPropertyChanged(nameof(SessionStatusText));
             UpdateElapsedText();
+            SyncTimer();
             AddEvidenceCommand.NotifyCanExecuteChanged();
             if (!CanRecordQuickScope && IsQuickScopeFormVisible)
                 IsQuickScopeFormVisible = false;
@@ -221,9 +233,8 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
     public async Task RefreshAsync()
     {
         var problems = await _problemService.SearchAsync(null);
-        Problems.Clear();
-        foreach (var problem in problems.Where(item => item.Status != ProblemStatus.Resolved))
-            Problems.Add(problem);
+        Problems = new ObservableCollection<ProblemListItem>(
+            problems.Where(item => item.Status != ProblemStatus.Resolved).Take(200));
 
         var openSession = await _workLogService.GetOpenAsync();
         Session = openSession;
@@ -231,7 +242,8 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         {
             _selectedProblem = Problems.FirstOrDefault(problem => problem.Id == openSession.ProblemId);
             OnPropertyChanged(nameof(SelectedProblem));
-            await LoadScopeItemsAsync(openSession.ProblemId);
+            var generation = ++_scopeItemsLoadGeneration;
+            await LoadScopeItemsAsync(openSession.ProblemId, generation);
             SelectedScopeItem = ScopeItems.FirstOrDefault(item => item.Id == openSession.ScopeItemId);
             TaskTitle = openSession.TaskTitle;
             WhatWasDone = openSession.WhatWasDone ?? string.Empty;
@@ -253,11 +265,11 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             Blocker = string.Empty;
             NextStep = string.Empty;
         }
-        SessionChanged?.Invoke();
     }
 
     public async Task LoadHistoryWorkLogAsync(int workLogId)
     {
+        ++_scopeItemsLoadGeneration;
         var workLog = await _workLogService.GetAsync(workLogId);
         if (workLog is null)
             return;
@@ -295,15 +307,15 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         Blocker = workLog.Blocker ?? string.Empty;
         NextStep = workLog.NextStep ?? string.Empty;
         await LoadEvidenceAsync(workLog);
-        SessionChanged?.Invoke();
     }
 
-    private async Task LoadScopeItemsAsync(int problemId)
+    private async Task LoadScopeItemsAsync(int problemId, int generation)
     {
         var items = await _scopeItemService.GetByProblemAsync(problemId);
-        ScopeItems.Clear();
-        foreach (var item in items.Where(item => item.Status == ScopeItemStatus.InScope))
-            ScopeItems.Add(item);
+        if (generation != _scopeItemsLoadGeneration || SelectedProblem?.Id != problemId)
+            return;
+        ScopeItems = new ObservableCollection<ScopeItemDetails>(
+            items.Where(item => item.Status == ScopeItemStatus.InScope));
     }
 
     private async Task StartAsync()
@@ -322,6 +334,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             return;
         }
         await RefreshAsync();
+        SessionChanged?.Invoke();
     }
 
     private async Task SaveTaskTitleAsync()
@@ -336,6 +349,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             return;
         }
         await LoadSessionDetailsAsync(id);
+        SessionChanged?.Invoke();
     }
 
     private async Task SaveQuickScopeAsync()
@@ -354,7 +368,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         QuickScopeReason = string.Empty;
         QuickScopeStatus = ScopeItemStatus.Backlog;
         IsQuickScopeFormVisible = false;
-        await LoadScopeItemsAsync(Session.ProblemId);
+        await LoadScopeItemsAsync(Session.ProblemId, _scopeItemsLoadGeneration);
     }
 
     private void CancelQuickScope()
@@ -387,8 +401,12 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             return;
         var result = await _workLogService.AbandonAsync(Session.Id);
         if (!result.Succeeded)
+        {
             _dialogs.ShowMessage("Chưa bỏ được phiên", result.Error ?? "Vui lòng thử lại.", true);
+            return;
+        }
         await RefreshAsync();
+        SessionChanged?.Invoke();
     }
 
     private async Task SaveReportAsync()
@@ -404,6 +422,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             return;
         }
         await LoadSessionDetailsAsync(id);
+        SessionChanged?.Invoke();
     }
 
     public async Task<bool> SavePendingChangesAsync(bool refreshAfterSave = true)
@@ -417,6 +436,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         }
 
         var id = Session.Id;
+        var savedData = false;
         if (CanUpdateTask && !Same(TaskTitle, Session.TaskTitle))
         {
             var taskResult = await _workLogService.UpdateTaskTitleAsync(id, TaskTitle);
@@ -425,6 +445,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
                 _dialogs.ShowMessage("Chưa cập nhật được nhiệm vụ", taskResult.Error ?? "Nội dung vẫn còn trên màn hình.", true);
                 return false;
             }
+            savedData = true;
         }
 
         if (IsReportVisible && ReportHasChanges())
@@ -436,6 +457,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
                 _dialogs.ShowMessage("Chưa lưu được báo cáo", reportResult.Error ?? "Nội dung vẫn còn trên màn hình.", true);
                 return false;
             }
+            savedData = true;
         }
 
         if (IsQuickScopeFormVisible && (!string.IsNullOrWhiteSpace(QuickScopeTitle) ||
@@ -448,13 +470,20 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
                 _dialogs.ShowMessage("Chưa ghi nhận được chủ đề", scopeResult.Error ?? "Nội dung vẫn còn trên màn hình.", true);
                 return false;
             }
+            savedData = true;
             CancelQuickScope();
         }
 
         if (!refreshAfterSave)
+        {
+            if (savedData)
+                SessionChanged?.Invoke();
             return true;
+        }
 
         await LoadSessionDetailsAsync(id);
+        if (savedData)
+            SessionChanged?.Invoke();
         return !HasUnsavedChanges;
     }
 
@@ -532,6 +561,7 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
             return;
         }
         await RefreshAsync();
+        SessionChanged?.Invoke();
     }
 
     private void UpdateElapsedText()
@@ -544,6 +574,19 @@ public sealed class WorkSessionViewModel : ObservableObject, IDisposable
         var total = Math.Max(0, Session.ElapsedSeconds(DateTime.UtcNow));
         var time = TimeSpan.FromSeconds(total);
         ElapsedText = time.TotalHours >= 1 ? time.ToString(@"h\:mm\:ss") : time.ToString(@"mm\:ss");
+    }
+
+    private void SyncTimer()
+    {
+        if (IsRunning)
+        {
+            if (!_timer.IsEnabled)
+                _timer.Start();
+        }
+        else if (_timer.IsEnabled)
+        {
+            _timer.Stop();
+        }
     }
 
     private void NotifyCommands()

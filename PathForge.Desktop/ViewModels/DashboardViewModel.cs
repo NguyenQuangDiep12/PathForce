@@ -110,11 +110,12 @@ public sealed class DashboardViewModel : ObservableObject
     public async Task RefreshAsync()
     {
         CurrentProblem = await _problemService.GetCurrentAsync();
-        OpenSession = await _workLogService.GetOpenAsync();
-        if (CurrentProblem is null)
-            RecentReport = null;
-        else
-            RecentReport = (await _workLogService.GetByProblemAsync(CurrentProblem.Id))
-                .FirstOrDefault(log => log.Status == WorkLogStatus.Completed);
+        var openSessionTask = _workLogService.GetOpenAsync();
+        var recentReportTask = CurrentProblem is null
+            ? Task.FromResult<WorkLogDetails?>(null)
+            : _workLogService.GetLatestCompletedAsync(CurrentProblem.Id);
+        await Task.WhenAll(openSessionTask, recentReportTask);
+        OpenSession = await openSessionTask;
+        RecentReport = await recentReportTask;
     }
 }
